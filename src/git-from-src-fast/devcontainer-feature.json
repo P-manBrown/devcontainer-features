@@ -1,0 +1,17 @@
+{
+  "id": "git-from-src-fast",
+  "version": "1.0.0",
+  "name": "Git (from source fast)",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/git-from-src-fast",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install an up-to-date version of Git, built from source at high speed. Useful for when you want the latest and greatest features. Auto-detects latest stable version and installs needed dependencies.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "2.20.1",
+      "description": "Enter a Git version."
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}
