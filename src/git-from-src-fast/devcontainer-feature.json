@@ -9,7 +9,7 @@
     "version": {
       "type": "string",
       "proposals": ["latest"],
-      "default": "2.20.1",
+      "default": "latest",
       "description": "Enter a Git version."
     }
   },
