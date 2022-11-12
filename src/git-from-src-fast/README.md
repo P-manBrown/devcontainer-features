@@ -15,11 +15,9 @@ Install an up-to-date version of Git, built from source at high speed. Useful fo
 
 ## Options
 
-| Options Id | Description | Type | Default Value |
-|-----|-----|-----|-----|
-| version | Enter a Git version. | string | 2.20.1 |
-
-
+| Options Id | Description          | Type   | Default Value |
+| ---------- | -------------------- | ------ | ------------- |
+| version    | Enter a Git version. | string | latest        |
 
 ---
 
