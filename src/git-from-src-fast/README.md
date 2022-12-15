@@ -7,9 +7,7 @@ Install an up-to-date version of Git, built from source at high speed. Useful fo
 
 ```json
 "features": {
-    "ghcr.io/P-manBrown/devcontainer-features/git-from-src-fast:1": {
-        "version": "latest"
-    }
+    "ghcr.io/P-manBrown/devcontainer-features/git-from-src-fast:1": {}
 }
 ```
 
