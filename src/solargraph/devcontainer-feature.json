@@ -1,0 +1,47 @@
+{
+  "id": "solargraph",
+  "version": "1.0.0",
+  "name": "Solargraph",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/solargraph",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install Solargraph.",
+  "options": {
+    "configFileDir": {
+      "type": "string",
+      "proposals": ["${containerWorkspaceFolder}"],
+      "default": "",
+      "description": "Enter the config file directory path."
+    },
+    "ignoreConfigFile": {
+      "type": "boolean",
+      "default": "true",
+      "description": "Ignore the config file in Git?"
+    },
+    "installSolargraphRails": {
+      "type": "boolean",
+      "default": "true",
+      "description": "Install solargraph-rails?"
+    },
+    "skipYardGems": {
+      "type": "boolean",
+      "default": "false",
+      "description": "Skip running `yard gems`?"
+    },
+    "solargraphVersion": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter a Solargraph version."
+    },
+    "solargraphRailsVersion": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter a solargraph-rails version."
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/devcontainers/features/ruby"
+  ]
+}
