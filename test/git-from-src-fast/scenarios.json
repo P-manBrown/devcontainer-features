@@ -1,0 +1,9 @@
+{
+  "git-from-src-fast-test": {
+    "image": "mcr.microsoft.com/devcontainers/base:debian",
+    "remoteUser": "vscode",
+    "features": {
+      "git-from-src-fast": {}
+    }
+  }
+}

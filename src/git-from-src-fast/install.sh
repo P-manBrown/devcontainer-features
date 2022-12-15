@@ -8,7 +8,7 @@
 
 set -e
 
-GIT_VERSION=${VERSION}
+GIT_VERSION=${VERSION:-'latest'}
 
 # Check
 ## User
@@ -72,16 +72,15 @@ if [ "$(echo "${GIT_VERSION}" | grep -o '\.' | wc -l)" != "2" ]; then
 		set -e
 	fi
 	if [ -z "${GIT_VERSION}" ] \
-		|| ! echo "${version_list}"| grep -q "^${GIT_VERSION//./\\.}$"
-	then
-		printf "\e[31m%s\e[m\n" "Invalid git version: ${requested_version}" >&2
-		exit 1
+		|| ! echo "${version_list}"| grep -q "^${GIT_VERSION//./\\.}$"; then
+			printf "\e[31m%s\e[m\n" "Invalid git version: ${requested_version}" >&2
+			exit 1
 	fi
 fi
 
 # Check that the requested version is not already installed
 set +e
-if [[ "$(git --version)" =~ "${GIT_VERSION}" ]]; then
+if [[ "$(git --version)" = *"${GIT_VERSION}" ]]; then
 	printf "\e[31m%s\e[m\n" "Git(v${GIT_VERSION}) is already installed."
 	exit 1
 fi
@@ -101,12 +100,12 @@ check_packages \
 
 # Install Git
 echo "Downloading source for ${GIT_VERSION}..."
-curl -sL https://github.com/git/git/archive/v${GIT_VERSION}.tar.gz \
+curl -sL "https://github.com/git/git/archive/v${GIT_VERSION}.tar.gz" \
 | tar -xzC /tmp 2>&1
 echo "Building..."
-cd /tmp/git-${GIT_VERSION}
+cd /tmp/git-"${GIT_VERSION}"
 make -s prefix=/usr/local all -j "$(nproc)" \
 && make -s prefix=/usr/local install 2>&1
-rm -rf /tmp/git-${GIT_VERSION}
+rm -rf "/tmp/git-${GIT_VERSION}"
 rm -rf /var/lib/apt/lists/*
 echo "Done!"
