@@ -1,0 +1,58 @@
+{
+  "id": "solargraph",
+  "version": "1.0.0",
+  "name": "Solargraph",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/solargraph",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install Solargraph.",
+  "options": {
+    "localConfigDir": {
+      "type": "string",
+      "proposals": [
+        "global",
+        "${containerWorkspaceFolder}"
+      ],
+      "default": "global",
+      "description": "Enter a local config file directory path or 'global'."
+    },
+    "gitignoreLocalConfig": {
+      "type": "boolean",
+      "default": "true",
+      "description": "Ignore a local config file in Git?"
+    },
+    "skipYardGems": {
+      "type": "boolean",
+      "default": "false",
+      "description": "Skip running `yard gems`?"
+    },
+    "installSolargraphRails": {
+      "type": "boolean",
+      "default": "true",
+      "description": "Install solargraph-rails?"
+    },
+    "solargraphVersion": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter a Solargraph version."
+    },
+    "solargraphRailsVersion": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter a solargraph-rails version."
+    }
+  },
+  "entrypoint": "/usr/local/share/solargraph-init.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["castwide.solargraph"]
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/devcontainers/features/ruby",
+    "ghcr.io/devcontainers/features/git",
+    "ghcr.io/P-manBrown/devcontainer-features/git-from-src-fast"
+  ]
+}

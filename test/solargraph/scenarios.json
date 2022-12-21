@@ -1,0 +1,9 @@
+{
+  "solargraph-test": {
+    "image": "mcr.microsoft.com/devcontainers/ruby",
+    "remoteUser": "vscode",
+    "features": {
+      "solargraph": {}
+    }
+  }
+}
