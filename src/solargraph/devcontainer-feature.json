@@ -1,6 +1,6 @@
 {
   "id": "solargraph",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Solargraph",
   "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/solargraph",
   "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
@@ -17,17 +17,17 @@
     },
     "gitignoreLocalConfig": {
       "type": "boolean",
-      "default": "true",
+      "default": true,
       "description": "Ignore a local config file in Git?"
     },
     "skipYardGems": {
       "type": "boolean",
-      "default": "false",
+      "default": false,
       "description": "Skip running `yard gems`?"
     },
     "installSolargraphRails": {
       "type": "boolean",
-      "default": "true",
+      "default": true,
       "description": "Install solargraph-rails?"
     },
     "solargraphVersion": {
