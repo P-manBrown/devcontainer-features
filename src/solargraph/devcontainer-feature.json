@@ -1,6 +1,6 @@
 {
   "id": "solargraph",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "Solargraph",
   "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/solargraph",
   "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
@@ -51,6 +51,7 @@
   },
   "installsAfter": [
     "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/P-manBrown/devcontainer-features/common-utils",
     "ghcr.io/devcontainers/features/ruby",
     "ghcr.io/devcontainers/features/git",
     "ghcr.io/P-manBrown/devcontainer-features/git-from-src-fast"

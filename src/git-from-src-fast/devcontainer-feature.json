@@ -1,6 +1,6 @@
 {
   "id": "git-from-src-fast",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Git (from source fast)",
   "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/git-from-src-fast",
   "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
@@ -13,5 +13,8 @@
       "description": "Enter a Git version."
     }
   },
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/P-manBrown/devcontainer-features/common-utils"
+  ]
 }
