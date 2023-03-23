@@ -124,7 +124,7 @@ cat <<-'EOF' > /usr/local/share/solargraph-init.sh
 	set +u
 	if [[ -n "${SOLARGRAPH_CACHE}" ]]; then
 	  mkdir_and_chown "${SOLARGRAPH_CACHE}"
-	  mv -n "${USER_HOME}/.solargraph/cache"/* "${SOLARGRAPH_CACHE}"
+	  cp -n "${USER_HOME}/.solargraph/cache"/* "${SOLARGRAPH_CACHE}"
 	  rm -fr "${USER_HOME}/.solargraph"
 	fi
 	set -u
@@ -134,10 +134,10 @@ cat <<-'EOF' > /usr/local/share/solargraph-init.sh
 	  global_config_default="${USER_HOME}/.config/solargraph/config.yml"
 	  global_config="${SOLARGRAPH_GLOBAL_CONFIG:-${global_config_default}}"
 	  mkdir_and_chown "${global_config%/*.yml}"
-	  mv -n "/tmp/solargraph/.solargraph.yml" "${global_config}"
+	  cp -n "/tmp/solargraph/.solargraph.yml" "${global_config}"
 	else
 	  mkdir_and_chown "${LOCAL_CONFIG_DIR}"
-	  mv -n "/tmp/solargraph/.solargraph.yml" "${LOCAL_CONFIG_DIR}"
+	  cp -n "/tmp/solargraph/.solargraph.yml" "${LOCAL_CONFIG_DIR}"
 	  cd "${LOCAL_CONFIG_DIR}"
 	  git_exclude="$(git rev-parse --git-path info/exclude)"
 	  if [[ "${GITIGNORE_LOCAL_CONFIG}" == 'true' ]] \
