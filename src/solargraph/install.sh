@@ -92,9 +92,12 @@ fi
 if [[ "${USER_NAME}" != "root" ]]; then
 	gem_dir="$(gem environment gemdir)"
 	chown -R "${USER_NAME}" "${gem_dir}"
-	chown -R "${USER_NAME}" "${USER_HOME}/.solargraph"
 	chown "${USER_NAME}" "${USER_HOME}/.gemrc"
 	chown -R "${USER_NAME}" /tmp/solargraph
+	home_solargraph_dir="${USER_HOME}/.solargraph"
+	if [[ -e "${home_solargraph_dir}" ]]; then
+		chown -R "${USER_NAME}" "${home_solargraph_dir}"
+	fi
 fi
 
 # Create entrypoint
