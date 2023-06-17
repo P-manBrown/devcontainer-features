@@ -17,10 +17,16 @@ Install Solargraph.
 |-----|-----|-----|-----|
 | localConfigDir | Enter a local config file directory path or 'global'. | string | global |
 | gitignoreLocalConfig | Ignore a local config file in Git? | boolean | true |
-| skipYardGems | Skip running `yard gems`? | boolean | false |
+| skipYardGems | Skip running `yard gems`? | boolean | true |
 | installSolargraphRails | Install solargraph-rails? | boolean | true |
 | solargraphVersion | Enter a Solargraph version. | string | latest |
 | solargraphRailsVersion | Enter a solargraph-rails version. | string | latest |
+
+## Customizations
+
+### VS Code Extensions
+
+- `castwide.solargraph`
 
 
 
