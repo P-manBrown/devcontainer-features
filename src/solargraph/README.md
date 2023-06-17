@@ -22,6 +22,12 @@ Install Solargraph.
 | solargraphVersion | Enter a Solargraph version. | string | latest |
 | solargraphRailsVersion | Enter a solargraph-rails version. | string | latest |
 
+## Customizations
+
+### VS Code Extensions
+
+- `castwide.solargraph`
+
 
 
 ---
