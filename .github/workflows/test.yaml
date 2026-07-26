@@ -13,8 +13,7 @@ jobs:
     strategy:
       matrix:
         features:
-          - color
-          - hello
+          - common-utils
         baseImage:
           - debian:latest
           - ubuntu:latest
@@ -34,8 +33,10 @@ jobs:
     strategy:
       matrix:
         features:
-          - color
-          - hello
+          - common-utils
+          - git-from-src-fast
+          - git-spice
+          - solargraph
     steps:
       - uses: actions/checkout@v3
 
