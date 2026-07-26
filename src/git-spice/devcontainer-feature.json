@@ -1,0 +1,27 @@
+{
+  "id": "git-spice",
+  "version": "1.0.0",
+  "name": "git-spice",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/git-spice",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install git-spice, a tool for stacking Git branches. Requires Git 2.38 or later.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter a git-spice version."
+    },
+    "installGsAlias": {
+      "type": "boolean",
+      "default": true,
+      "description": "Create a 'gs' symlink for git-spice, as recommended by the official docs?"
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/P-manBrown/devcontainer-features/common-utils",
+    "ghcr.io/devcontainers/features/git",
+    "ghcr.io/P-manBrown/devcontainer-features/git-from-src-fast"
+  ]
+}

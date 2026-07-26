@@ -1,0 +1,9 @@
+{
+  "git-spice-test": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "git-spice": {}
+    }
+  }
+}
