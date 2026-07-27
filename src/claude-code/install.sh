@@ -37,7 +37,7 @@ if [[ "${USER_NAME}" == "root" ]]; then
 else
 	curl -fsSL https://claude.ai/install.sh \
 		| su -s /bin/bash \
-			-c "HOME='${USER_HOME}' bash -s -- '${VERSION}'" \
+			-c "HOME=$(printf '%q' "${USER_HOME}") bash -s -- $(printf '%q' "${VERSION}")" \
 			"${USER_NAME}"
 fi
 
@@ -122,7 +122,9 @@ cat <<-'EOF' > /usr/local/share/claude-code-init.sh
 	migrate_config_dir
 	migrate_config_file
 	touch "${VOLUME_CONFIG_FILE}"
+	chmod 600 "${VOLUME_CONFIG_FILE}"
 	chown -R "${USER_NAME}" "${CONFIG_ROOT}"
+	chmod 700 "${CONFIG_ROOT}"
 
 	ln -sfn "${VOLUME_CONFIG_DIR}" "${HOME_CONFIG_DIR}"
 	ln -sfn "${VOLUME_CONFIG_FILE}" "${HOME_CONFIG_FILE}"
