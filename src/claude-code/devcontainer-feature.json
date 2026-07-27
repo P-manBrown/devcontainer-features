@@ -1,0 +1,27 @@
+{
+  "id": "claude-code",
+  "version": "1.0.0",
+  "name": "Claude Code",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/claude-code",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install the official Claude Code CLI.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest", "stable"],
+      "default": "latest",
+      "description": "Enter a Claude Code version, or use 'latest' or 'stable'."
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"]
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/P-manBrown/devcontainer-features/common-utils",
+    "ghcr.io/devcontainers/features/git",
+    "ghcr.io/P-manBrown/devcontainer-features/git-from-src-fast"
+  ]
+}
