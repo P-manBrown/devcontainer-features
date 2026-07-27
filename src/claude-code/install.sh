@@ -128,8 +128,6 @@ cat <<-'EOF' > /usr/local/share/claude-code-init.sh
 	mkdir -p "${VOLUME_CONFIG_DIR}"
 	migrate_config_dir
 	migrate_config_file
-	touch "${VOLUME_CONFIG_FILE}"
-	chmod 600 "${VOLUME_CONFIG_FILE}"
 	chown -R "${USER_NAME}" "${CONFIG_ROOT}"
 	chmod 700 "${CONFIG_ROOT}"
 
