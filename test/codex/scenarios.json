@@ -1,0 +1,9 @@
+{
+  "codex-test": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "codex": {}
+    }
+  }
+}

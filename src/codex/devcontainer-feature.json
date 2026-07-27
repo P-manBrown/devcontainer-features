@@ -1,0 +1,35 @@
+{
+  "id": "codex",
+  "version": "1.0.0",
+  "name": "Codex",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/codex",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install the official Codex CLI.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter a Codex version, or use 'latest'."
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["openai.chatgpt"]
+    }
+  },
+  "mounts": [
+    {
+      "source": "codex-config-${devcontainerId}",
+      "target": "/usr/local/share/codex-config",
+      "type": "volume"
+    }
+  ],
+  "entrypoint": "/usr/local/share/codex-init.sh",
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/P-manBrown/devcontainer-features/common-utils",
+    "ghcr.io/devcontainers/features/git",
+    "ghcr.io/P-manBrown/devcontainer-features/git-from-src-fast"
+  ]
+}
