@@ -34,6 +34,7 @@ jobs:
       matrix:
         features:
           - claude-code
+          - codex
           - common-utils
           - git-from-src-fast
           - git-spice
