@@ -33,6 +33,7 @@ jobs:
     strategy:
       matrix:
         features:
+          - claude-code
           - common-utils
           - git-from-src-fast
           - git-spice
