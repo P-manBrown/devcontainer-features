@@ -129,8 +129,6 @@ cat <<-'EOF' > /usr/local/share/codex-init.sh
 			fi
 		fi
 
-		touch "${volume_path}"
-		chmod 600 "${volume_path}"
 		ln -sfn "${volume_path}" "${home_path}"
 	}
 
