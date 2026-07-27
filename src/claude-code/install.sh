@@ -43,6 +43,13 @@ fi
 
 ln -sf "${USER_HOME}/.local/bin/claude" /usr/local/bin/claude
 
+# Pre-create the mount point owned by the target user. The entrypoint may
+# run as a non-root user (e.g. when the base image sets USER), so it can't
+# chown the volume itself; Docker copies this ownership into the named
+# volume on its first mount, which is what makes that work.
+mkdir -p /usr/local/share/claude-code-config
+chown "${USER_NAME}" /usr/local/share/claude-code-config
+
 # Create entrypoint
 cat <<-EOF > /usr/local/share/claude-code.env
 	USER_NAME="${USER_NAME}"
