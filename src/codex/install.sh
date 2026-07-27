@@ -30,6 +30,25 @@ if ! curl --version > /dev/null 2>&1; then
 	exit 1
 fi
 
+# Install bubblewrap so Codex's Linux sandbox uses the distro package
+# instead of its bundled fallback. See:
+# https://developers.openai.com/codex/concepts/sandboxing#prerequisites
+if [[ -f /etc/os-release ]]; then
+	. /etc/os-release
+	case "${ID:-}:${ID_LIKE:-}" in
+		*debian* | *ubuntu*)
+			apt-get update -y
+			apt-get -y install --no-install-recommends bubblewrap
+			rm -rf /var/lib/apt/lists/*
+			;;
+		*)
+			err "WARNING: bubblewrap could not be auto-installed on this distro (${ID:-unknown}); Codex will fall back to its bundled bubblewrap."
+			;;
+	esac
+else
+	err "WARNING: /etc/os-release not found; skipping bubblewrap install. Codex will fall back to its bundled bubblewrap."
+fi
+
 # Install
 if [[ "${USER_NAME}" == "root" ]]; then
 	curl -fsSL https://chatgpt.com/codex/install.sh \
