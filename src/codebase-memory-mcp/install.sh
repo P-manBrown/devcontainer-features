@@ -5,6 +5,7 @@ USER_NAME="${_REMOTE_USER}"
 USER_HOME="${_REMOTE_USER_HOME}"
 
 VERSION="${VERSION:-"latest"}"
+AUTOINDEX="${AUTOINDEX:-false}"
 
 err() {
 	printf '\e[31m%s\e[m\n' "$*" >&2
@@ -83,6 +84,7 @@ chown "${USER_NAME}" /usr/local/share/codebase-memory-mcp-cache
 cat <<-EOF > /usr/local/share/codebase-memory-mcp.env
 	USER_NAME="${USER_NAME}"
 	USER_HOME="${USER_HOME}"
+	AUTOINDEX="${AUTOINDEX}"
 EOF
 cat <<-'EOF' > /usr/local/share/codebase-memory-mcp-init.sh
 	#!/usr/bin/env bash
@@ -130,6 +132,14 @@ cat <<-'EOF' > /usr/local/share/codebase-memory-mcp-init.sh
 	chown -R "${USER_NAME}" "${CACHE_ROOT}"
 
 	ln -sfn "${CACHE_ROOT}" "${HOME_CACHE_DIR}"
+
+	if [[ "${USER_NAME}" == "root" ]]; then
+		HOME="${USER_HOME}" codebase-memory-mcp config set auto_index "${AUTOINDEX}"
+	else
+		su -s /bin/bash \
+			-c "HOME=$(printf '%q' "${USER_HOME}") codebase-memory-mcp config set auto_index $(printf '%q' "${AUTOINDEX}")" \
+			"${USER_NAME}"
+	fi
 
 	if [[ "${USER_NAME}" == "root" ]]; then
 		HOME="${USER_HOME}" codebase-memory-mcp install --yes

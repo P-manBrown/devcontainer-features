@@ -11,6 +11,11 @@
       "proposals": ["latest"],
       "default": "latest",
       "description": "Enter a codebase-memory-mcp version (e.g. 'v0.9.0'), or use 'latest'."
+    },
+    "autoIndex": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable the binary's own auto-indexing of new projects on first MCP session connection (codebase-memory-mcp config set auto_index)."
     }
   },
   "mounts": [
