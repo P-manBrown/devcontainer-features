@@ -16,6 +16,11 @@
       "type": "boolean",
       "default": false,
       "description": "Enable the binary's own auto-indexing of new projects on first MCP session connection (codebase-memory-mcp config set auto_index)."
+    },
+    "ui": {
+      "type": "boolean",
+      "default": false,
+      "description": "Install the UI variant, which adds an optional 3D graph-visualization web UI."
     }
   },
   "mounts": [

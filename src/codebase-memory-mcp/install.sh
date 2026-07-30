@@ -6,6 +6,7 @@ USER_HOME="${_REMOTE_USER_HOME}"
 
 VERSION="${VERSION:-"latest"}"
 AUTOINDEX="${AUTOINDEX:-false}"
+UI="${UI:-false}"
 
 err() {
 	printf '\e[31m%s\e[m\n' "$*" >&2
@@ -46,7 +47,11 @@ case "$(uname -m)" in
 esac
 
 # Download and verify
-asset="codebase-memory-mcp-linux-${arch}-portable.tar.gz"
+variant="codebase-memory-mcp"
+if [[ "${UI}" == "true" ]]; then
+	variant="codebase-memory-mcp-ui"
+fi
+asset="${variant}-linux-${arch}-portable.tar.gz"
 if [[ "${VERSION}" == "latest" ]]; then
 	download_url="https://github.com/DeusData/codebase-memory-mcp/releases/latest/download"
 else
