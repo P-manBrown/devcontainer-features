@@ -1,0 +1,28 @@
+{
+  "id": "codebase-memory-mcp",
+  "version": "1.0.0",
+  "name": "Codebase Memory MCP",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/codebase-memory-mcp",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install the codebase-memory-mcp binary and configure it for detected coding agents.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter a codebase-memory-mcp version (e.g. 'v0.9.0'), or use 'latest'."
+    }
+  },
+  "mounts": [
+    {
+      "source": "codebase-memory-mcp-cache-${devcontainerId}",
+      "target": "/usr/local/share/codebase-memory-mcp-cache",
+      "type": "volume"
+    }
+  ],
+  "entrypoint": "/usr/local/share/codebase-memory-mcp-init.sh",
+  "installsAfter": [
+    "ghcr.io/P-manBrown/devcontainer-features/claude-code",
+    "ghcr.io/P-manBrown/devcontainer-features/codex"
+  ]
+}

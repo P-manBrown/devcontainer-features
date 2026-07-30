@@ -34,6 +34,7 @@ jobs:
       matrix:
         features:
           - claude-code
+          - codebase-memory-mcp
           - codex
           - common-utils
           - git-from-src-fast
