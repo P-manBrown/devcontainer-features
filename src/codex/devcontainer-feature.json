@@ -4,7 +4,7 @@
   "name": "Codex",
   "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/codex",
   "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
-  "description": "Install the official Codex CLI. Relaxes the container's seccomp profile and adds SYS_ADMIN so Codex's bubblewrap-based Linux sandbox can create the user namespace it needs.",
+  "description": "Install the official Codex CLI. Relaxes the container's seccomp/AppArmor profiles and adds SYS_ADMIN so Codex's bubblewrap-based Linux sandbox can create the user namespace it needs.",
   "options": {
     "version": {
       "type": "string",
@@ -25,7 +25,7 @@
       "type": "volume"
     }
   ],
-  "securityOpt": ["seccomp=unconfined"],
+  "securityOpt": ["seccomp=unconfined", "apparmor=unconfined"],
   "capAdd": ["SYS_ADMIN"],
   "entrypoint": "/usr/local/share/codex-init.sh",
   "installsAfter": [
