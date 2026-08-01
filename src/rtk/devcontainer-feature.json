@@ -1,0 +1,33 @@
+{
+  "id": "rtk",
+  "version": "1.0.0",
+  "name": "rtk",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/rtk",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install rtk, a CLI proxy that compresses bash command output to reduce LLM token consumption, with optional automatic hook setup for Claude Code and Codex.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter an rtk version (e.g. 'v0.44.1'), or use 'latest'."
+    },
+    "claudeCodeHook": {
+      "type": "boolean",
+      "default": false,
+      "description": "On container start, run 'rtk init -g --auto-patch' to automatically set up a Claude Code PreToolUse hook and RTK.md. Requires the claude-code feature."
+    },
+    "codexHook": {
+      "type": "boolean",
+      "default": false,
+      "description": "On container start, run 'rtk init -g --codex' to automatically set up Codex AGENTS.md/RTK.md integration. Requires the codex feature."
+    }
+  },
+  "entrypoint": "/usr/local/share/rtk-init.sh",
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/P-manBrown/devcontainer-features/common-utils",
+    "ghcr.io/P-manBrown/devcontainer-features/claude-code",
+    "ghcr.io/P-manBrown/devcontainer-features/codex"
+  ]
+}
