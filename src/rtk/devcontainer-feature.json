@@ -20,7 +20,7 @@
     "codexHook": {
       "type": "boolean",
       "default": false,
-      "description": "On container start, run 'rtk init -g --codex --auto-patch' to automatically set up Codex AGENTS.md/RTK.md integration. Requires the codex feature."
+      "description": "On container start, run 'rtk init -g --codex' to automatically set up Codex AGENTS.md/RTK.md integration. Requires the codex feature."
     }
   },
   "entrypoint": "/usr/local/share/rtk-init.sh",

@@ -110,10 +110,10 @@ cat <<-'EOF' > /usr/local/share/rtk-init.sh
 
 	if [[ "${CODEX_HOOK}" == "true" ]]; then
 		if [[ "${USER_NAME}" == "root" ]]; then
-			HOME="${USER_HOME}" rtk init -g --codex --auto-patch
+			HOME="${USER_HOME}" rtk init -g --codex
 		else
 			su -s /bin/bash \
-				-c "HOME=$(printf '%q' "${USER_HOME}") rtk init -g --codex --auto-patch" \
+				-c "HOME=$(printf '%q' "${USER_HOME}") rtk init -g --codex" \
 				"${USER_NAME}"
 		fi
 	fi
