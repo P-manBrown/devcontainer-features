@@ -39,6 +39,7 @@ jobs:
           - common-utils
           - git-from-src-fast
           - git-spice
+          - rtk
           - solargraph
     steps:
       - uses: actions/checkout@v3
