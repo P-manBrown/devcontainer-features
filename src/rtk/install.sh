@@ -33,12 +33,15 @@ if ! curl --version > /dev/null 2>&1; then
 fi
 
 # Detect architecture
+# NOTE: aarch64 has no prebuilt musl (libc-independent) binary upstream, and the
+# prebuilt gnu binary is linked against a newer GLIBC than common base images
+# (e.g. Debian bookworm) provide, so it is built from source instead.
 case "$(uname -m)" in
 	x86_64)
 		target="x86_64-unknown-linux-musl"
 		;;
 	aarch64|arm64)
-		target="aarch64-unknown-linux-gnu"
+		target=""
 		;;
 	*)
 		err "ERROR: Unsupported architecture: $(uname -m)"
@@ -61,26 +64,44 @@ else
 	VERSION="${VERSION#v}"
 fi
 
-# Download and verify
-asset="rtk-${target}.tar.gz"
-download_url="https://github.com/rtk-ai/rtk/releases/download/v${VERSION}"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "${tmp_dir}"' EXIT
 
-curl -fsSL "${download_url}/${asset}" -o "${tmp_dir}/${asset}"
-curl -fsSL "${download_url}/checksums.txt" -o "${tmp_dir}/checksums.txt"
+if [[ -n "${target}" ]]; then
+	# Download and verify prebuilt binary
+	asset="rtk-${target}.tar.gz"
+	download_url="https://github.com/rtk-ai/rtk/releases/download/v${VERSION}"
 
-if ! checksum_line="$(
-	grep -E "^[[:xdigit:]]{64}[[:space:]]+\\*?${asset//./\\.}$" "${tmp_dir}/checksums.txt"
-)"; then
-	err "ERROR: Checksum not found for ${asset}."
-	exit 1
+	curl -fsSL "${download_url}/${asset}" -o "${tmp_dir}/${asset}"
+	curl -fsSL "${download_url}/checksums.txt" -o "${tmp_dir}/checksums.txt"
+
+	if ! checksum_line="$(
+		grep -E "^[[:xdigit:]]{64}[[:space:]]+\\*?${asset//./\\.}$" "${tmp_dir}/checksums.txt"
+	)"; then
+		err "ERROR: Checksum not found for ${asset}."
+		exit 1
+	fi
+	printf '%s\n' "${checksum_line}" | (cd "${tmp_dir}" && sha256sum -c -)
+
+	tar -xzf "${tmp_dir}/${asset}" -C "${tmp_dir}"
+	install -m 0755 "${tmp_dir}/rtk" /usr/local/bin/rtk
+else
+	# Build from source
+	if ! command -v cc > /dev/null 2>&1 || ! command -v git > /dev/null 2>&1; then
+		apt-get update -qq
+		apt-get install -y -qq --no-install-recommends \
+			build-essential pkg-config libssl-dev git ca-certificates
+	fi
+
+	export CARGO_HOME="${tmp_dir}/cargo"
+	export RUSTUP_HOME="${tmp_dir}/rustup"
+	curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs \
+		| sh -s -- -y -q --profile minimal --default-toolchain stable --no-modify-path
+
+	# shellcheck disable=SC1091
+	source "${CARGO_HOME}/env"
+	cargo install --git https://github.com/rtk-ai/rtk --tag "v${VERSION}" --root /usr/local rtk
 fi
-printf '%s\n' "${checksum_line}" | (cd "${tmp_dir}" && sha256sum -c -)
-
-# Install
-tar -xzf "${tmp_dir}/${asset}" -C "${tmp_dir}"
-install -m 0755 "${tmp_dir}/rtk" /usr/local/bin/rtk
 
 installed_version="$(rtk --version)"
 echo "Installed: ${installed_version}"
