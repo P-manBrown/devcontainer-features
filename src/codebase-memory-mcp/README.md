@@ -30,7 +30,7 @@ Reaching the UI from your host browser is something you need to configure in you
   "forwardPorts": [9749]
   ```
 
-  Then just run:
+  Then run:
 
   ```bash
   codebase-memory-mcp --ui=true --port=9749
@@ -43,10 +43,16 @@ Reaching the UI from your host browser is something you need to configure in you
   "appPort": ["9749:9749"]
   ```
 
-  This Feature already installed `socat` — run:
+  This Feature already installed `socat`. Run:
 
   ```bash
-  codebase-memory-mcp --ui=true --port=9749 && socat TCP-LISTEN:9749,bind=$(hostname -I | awk '{print $1}'),fork,reuseaddr TCP:127.0.0.1:9749 &
+  codebase-memory-mcp --ui=true --port=9749
+  ```
+
+  Then, once it's up, relay it:
+
+  ```bash
+  socat TCP-LISTEN:9749,bind=$(hostname -I | awk '{print $1}'),fork,reuseaddr TCP:127.0.0.1:9749
   ```
 
 
