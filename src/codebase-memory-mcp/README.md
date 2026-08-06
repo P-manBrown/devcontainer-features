@@ -19,6 +19,35 @@ Install the codebase-memory-mcp binary and configure it for detected coding agen
 | autoIndex | Enable the binary's own auto-indexing of new projects on first MCP session connection (codebase-memory-mcp config set auto_index). | boolean | false |
 | ui | Install the UI variant, which adds an optional 3D graph-visualization web UI. | boolean | false |
 
+## Using the UI
+
+Reaching the UI from your host browser is something you need to configure in your own `.devcontainer/devcontainer.json`, and it determines which command you run inside the container.
+
+- If your editor supports `forwardPorts`, forward port 9749:
+
+  ```jsonc
+  // .devcontainer/devcontainer.json
+  "forwardPorts": [9749]
+  ```
+
+  Then just run:
+
+  ```bash
+  codebase-memory-mcp --ui=true --port=9749
+  ```
+
+- If your editor only supports `appPort`, publish port 9749:
+
+  ```jsonc
+  // .devcontainer/devcontainer.json
+  "appPort": ["9749:9749"]
+  ```
+
+  This Feature already installed `socat` — run:
+
+  ```bash
+  codebase-memory-mcp --ui=true --port=9749 && socat TCP-LISTEN:9749,bind=$(hostname -I | awk '{print $1}'),fork,reuseaddr TCP:127.0.0.1:9749 &
+  ```
 
 
 ---
