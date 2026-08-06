@@ -5,5 +5,15 @@
     "features": {
       "codebase-memory-mcp": {}
     }
+  },
+  "ui": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "appPort": ["9749:9749"],
+    "features": {
+      "codebase-memory-mcp": {
+        "ui": true
+      }
+    }
   }
 }
