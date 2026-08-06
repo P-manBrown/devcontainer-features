@@ -19,7 +19,7 @@ Reaching the UI from your host browser is something you need to configure in you
 
   ```jsonc
   // .devcontainer/devcontainer.json
-  "appPort": ["9749:9749"]
+  "appPort": ["127.0.0.1:9749:9749"]
   ```
 
   This Feature already installed `socat`. Run:
