@@ -33,11 +33,12 @@ if ! curl --version > /dev/null 2>&1; then
 fi
 
 # Install socat so the UI's 127.0.0.1-bound web server can be relayed to
-# a listener reachable from the host (see devcontainer-feature.json's
-# forwardPorts). /etc/os-release is sourced in a subshell: it defines its
-# own VERSION field, which would otherwise clobber this script's VERSION
-# (the requested codebase-memory-mcp release).
-if [[ "${UI}" == "true" ]]; then
+# a listener reachable from the host (see NOTES.md). Skip if it's already
+# present (e.g. via common-utils) to avoid a redundant apt-get update.
+# /etc/os-release is sourced in a subshell: it defines its own VERSION
+# field, which would otherwise clobber this script's VERSION (the
+# requested codebase-memory-mcp release).
+if [[ "${UI}" == "true" ]] && ! command -v socat > /dev/null 2>&1; then
 	if [[ -f /etc/os-release ]]; then
 		os_id_info="$(. /etc/os-release && printf '%s:%s' "${ID:-}" "${ID_LIKE:-}")"
 		case "${os_id_info}" in
