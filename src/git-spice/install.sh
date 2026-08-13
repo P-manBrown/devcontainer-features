@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -eu
 
+USER_NAME="${_REMOTE_USER}"
+USER_HOME="${_REMOTE_USER_HOME}"
+
 VERSION="${VERSION:-"latest"}"
 INSTALL_GS_ALIAS="${INSTALLGSALIAS:-"true"}"
 
@@ -81,5 +84,68 @@ install -m 0755 "${tmp_dir}/git-spice" /usr/local/bin/git-spice
 if [[ "${INSTALL_GS_ALIAS}" == "true" ]]; then
 	ln -sf /usr/local/bin/git-spice /usr/local/bin/gs
 fi
+
+# Pre-create the mount point owned by the target user. The entrypoint may
+# run as a non-root user (e.g. when the base image sets USER), so it can't
+# chown the volume itself; Docker copies this ownership into the named
+# volume on its first mount, which is what makes that work.
+mkdir -p /usr/local/share/git-spice-config
+chown "${USER_NAME}" /usr/local/share/git-spice-config
+
+# Create entrypoint
+cat <<-EOF > /usr/local/share/git-spice.env
+	USER_NAME="${USER_NAME}"
+	USER_HOME="${USER_HOME}"
+EOF
+cat <<-'EOF' > /usr/local/share/git-spice-init.sh
+	#!/usr/bin/env bash
+	set -eu
+
+	source /usr/local/share/git-spice.env
+
+	CONFIG_ROOT="/usr/local/share/git-spice-config"
+	HOME_GIT_SPICE_DIR="${USER_HOME}/.config/git-spice"
+	PERSISTENT_FILE="secrets.json"
+
+	err() {
+		printf '\e[31m%s\e[m\n' "$*" >&2
+	}
+
+	migrate_config_file() {
+		name="$1"
+		home_path="${HOME_GIT_SPICE_DIR}/${name}"
+		volume_path="${CONFIG_ROOT}/${name}"
+
+		if [[ -L "${home_path}" ]]; then
+			return
+		fi
+		if [[ -e "${home_path}" ]] && [[ ! -f "${home_path}" ]]; then
+			err "ERROR: ${home_path} exists but is not a regular file; leaving it unchanged."
+			return 1
+		fi
+		if [[ -f "${home_path}" ]]; then
+			if [[ -e "${volume_path}" ]]; then
+				# The volume already holds data from a previous container;
+				# discard the fresh container-local state and let it win.
+				rm -f "${home_path}"
+			else
+				cp -a "${home_path}" "${volume_path}"
+				if ! cmp -s "${home_path}" "${volume_path}"; then
+					err "ERROR: Failed to verify the copy of ${home_path}; leaving the source unchanged."
+					return 1
+				fi
+				rm -f "${home_path}"
+			fi
+		fi
+
+		ln -sfn "${volume_path}" "${home_path}"
+	}
+
+	mkdir -p "${HOME_GIT_SPICE_DIR}"
+	migrate_config_file "${PERSISTENT_FILE}"
+	chown -R "${USER_NAME}" "${CONFIG_ROOT}"
+	chmod 700 "${CONFIG_ROOT}"
+EOF
+chmod +x /usr/local/share/git-spice-init.sh
 
 echo "Done!"
