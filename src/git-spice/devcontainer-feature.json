@@ -1,6 +1,6 @@
 {
   "id": "git-spice",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "git-spice",
   "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/git-spice",
   "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
@@ -18,6 +18,14 @@
       "description": "Create a 'gs' symlink for git-spice, as recommended by the official docs?"
     }
   },
+  "mounts": [
+    {
+      "source": "git-spice-secrets-${devcontainerId}",
+      "target": "/usr/local/share/git-spice-config",
+      "type": "volume"
+    }
+  ],
+  "entrypoint": "/usr/local/share/git-spice-init.sh",
   "installsAfter": [
     "ghcr.io/devcontainers/features/common-utils",
     "ghcr.io/P-manBrown/devcontainer-features/common-utils",
