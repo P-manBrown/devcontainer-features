@@ -1,7 +1,7 @@
 
 # Bruno CLI (bruno-cli)
 
-Install the Bruno CLI (bru) via npm.
+Install the Bruno CLI (bru) via npm, installing a minimal Node.js toolchain first if npm isn't already on PATH.
 
 ## Example Usage
 
