@@ -15,14 +15,20 @@ Reaching the UI from your host browser is something you need to configure in you
   codebase-memory-mcp --ui=true --port=9749
   ```
 
-- If your editor only supports `appPort`, publish port 9749:
+- If your editor only supports `appPort`, publish port 9749 and set the
+  `portRelay` option to install `socat`:
 
   ```jsonc
   // .devcontainer/devcontainer.json
-  "appPort": ["127.0.0.1:9749:9749"]
+  "appPort": ["127.0.0.1:9749:9749"],
+  "features": {
+    "ghcr.io/P-manBrown/devcontainer-features/codebase-memory-mcp:2": {
+      "portRelay": true
+    }
+  }
   ```
 
-  This Feature already installed `socat`. Run:
+  Run:
 
   ```bash
   codebase-memory-mcp --ui=true --port=9749

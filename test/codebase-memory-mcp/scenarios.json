@@ -6,13 +6,13 @@
       "codebase-memory-mcp": {}
     }
   },
-  "ui": {
+  "port-relay": {
     "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "remoteUser": "vscode",
     "appPort": ["127.0.0.1:9749:9749"],
     "features": {
       "codebase-memory-mcp": {
-        "ui": true
+        "portRelay": true
       }
     }
   }
