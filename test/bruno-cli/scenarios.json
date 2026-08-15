@@ -5,5 +5,13 @@
     "features": {
       "bruno-cli": {}
     }
+  },
+  "with-node": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "ghcr.io/devcontainers/features/node:1": {},
+      "bruno-cli": {}
+    }
   }
 }
