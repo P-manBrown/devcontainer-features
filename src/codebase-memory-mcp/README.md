@@ -7,7 +7,7 @@ Install the codebase-memory-mcp binary and configure it for detected coding agen
 
 ```json
 "features": {
-    "ghcr.io/P-manBrown/devcontainer-features/codebase-memory-mcp:1": {}
+    "ghcr.io/P-manBrown/devcontainer-features/codebase-memory-mcp:2": {}
 }
 ```
 
@@ -17,7 +17,7 @@ Install the codebase-memory-mcp binary and configure it for detected coding agen
 |-----|-----|-----|-----|
 | version | Enter a codebase-memory-mcp version (e.g. 'v0.9.0'), or use 'latest'. | string | latest |
 | autoIndex | Enable the binary's own auto-indexing of new projects on first MCP session connection (codebase-memory-mcp config set auto_index). | boolean | false |
-| ui | Install the UI variant, which adds an optional 3D graph-visualization web UI. | boolean | false |
+| portRelay | Install socat to relay the UI's port 9749 through appPort-only publishing, for editors without forwardPorts support (e.g. Zed). Not needed if your editor supports forwardPorts. | boolean | false |
 
 ## Using the UI
 
@@ -36,14 +36,20 @@ Reaching the UI from your host browser is something you need to configure in you
   codebase-memory-mcp --ui=true --port=9749
   ```
 
-- If your editor only supports `appPort`, publish port 9749:
+- If your editor only supports `appPort`, publish port 9749 and set the
+  `portRelay` option to install `socat`:
 
   ```jsonc
   // .devcontainer/devcontainer.json
-  "appPort": ["127.0.0.1:9749:9749"]
+  "appPort": ["127.0.0.1:9749:9749"],
+  "features": {
+    "ghcr.io/P-manBrown/devcontainer-features/codebase-memory-mcp:2": {
+      "portRelay": true
+    }
+  }
   ```
 
-  This Feature already installed `socat`. Run:
+  Run:
 
   ```bash
   codebase-memory-mcp --ui=true --port=9749
