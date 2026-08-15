@@ -1,0 +1,9 @@
+{
+  "bruno-cli-test": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "bruno-cli": {}
+    }
+  }
+}
