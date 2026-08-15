@@ -1,0 +1,19 @@
+{
+  "id": "bruno-cli",
+  "version": "1.0.0",
+  "name": "Bruno CLI",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/bruno-cli",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install the Bruno CLI (bru) via npm.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter a Bruno CLI version, or use 'latest'."
+    }
+  },
+  "dependsOn": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  }
+}

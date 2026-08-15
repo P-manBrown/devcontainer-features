@@ -33,6 +33,7 @@ jobs:
     strategy:
       matrix:
         features:
+          - bruno-cli
           - claude-code
           - codebase-memory-mcp
           - codex
