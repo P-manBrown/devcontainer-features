@@ -6,7 +6,7 @@ USER_HOME="${_REMOTE_USER_HOME}"
 
 VERSION="${VERSION:-"latest"}"
 AUTOINDEX="${AUTOINDEX:-false}"
-UI="${UI:-false}"
+PORTRELAY="${PORTRELAY:-false}"
 
 err() {
 	printf '\e[31m%s\e[m\n' "$*" >&2
@@ -38,7 +38,7 @@ fi
 # /etc/os-release is sourced in a subshell: it defines its own VERSION
 # field, which would otherwise clobber this script's VERSION (the
 # requested codebase-memory-mcp release).
-if [[ "${UI}" == "true" ]] && ! command -v socat > /dev/null 2>&1; then
+if [[ "${PORTRELAY}" == "true" ]] && ! command -v socat > /dev/null 2>&1; then
 	if [[ -f /etc/os-release ]]; then
 		os_id_info="$(. /etc/os-release && printf '%s:%s' "${ID:-}" "${ID_LIKE:-}")"
 		case "${os_id_info}" in
@@ -71,11 +71,9 @@ case "$(uname -m)" in
 esac
 
 # Download and verify
-variant="codebase-memory-mcp"
-if [[ "${UI}" == "true" ]]; then
-	variant="codebase-memory-mcp-ui"
-fi
-asset="${variant}-linux-${arch}-portable.tar.gz"
+# The graph-visualization UI is bundled into every build since v0.10.0, so
+# there is no separate "-ui" asset to select between anymore.
+asset="codebase-memory-mcp-linux-${arch}-portable.tar.gz"
 if [[ "${VERSION}" == "latest" ]]; then
 	download_url="https://github.com/DeusData/codebase-memory-mcp/releases/latest/download"
 else
@@ -114,7 +112,6 @@ cat <<-EOF > /usr/local/share/codebase-memory-mcp.env
 	USER_NAME="${USER_NAME}"
 	USER_HOME="${USER_HOME}"
 	AUTOINDEX="${AUTOINDEX}"
-	UI="${UI}"
 EOF
 cat <<-'EOF' > /usr/local/share/codebase-memory-mcp-init.sh
 	#!/usr/bin/env bash
