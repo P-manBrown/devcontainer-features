@@ -15,5 +15,14 @@
         "portRelay": true
       }
     }
+  },
+  "with-agents": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "claude-code": {},
+      "codex": {},
+      "codebase-memory-mcp": {}
+    }
   }
 }
