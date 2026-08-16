@@ -65,7 +65,7 @@ if ! npm --version > /dev/null 2>&1; then
 	curl -fsSL "https://nodejs.org/dist/v${node_version}/${node_asset}" -o "${node_tmp_dir}/${node_asset}"
 	printf '%s  %s\n' "${node_checksum}" "${node_asset}" | (cd "${node_tmp_dir}" && sha256sum -c -)
 
-	tar -xJf "${node_tmp_dir}/${node_asset}" -C /usr/local --strip-components=1
+	tar -xJf "${node_tmp_dir}/${node_asset}" -C /usr/local --strip-components=1 --no-same-owner
 	rm -rf "${node_tmp_dir}"
 fi
 
