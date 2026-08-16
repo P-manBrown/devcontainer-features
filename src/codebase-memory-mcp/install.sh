@@ -168,6 +168,80 @@ cat <<-'EOF' > /usr/local/share/codebase-memory-mcp-init.sh
 			"${USER_NAME}"
 	fi
 
+	# CBM's install activation is stricter than this environment's normal,
+	# correct state: it refuses to write under a group-writable directory
+	# (Debian's pam_umask "usergroups" rule makes ~/.local group-writable
+	# when the user's name matches their primary group, a common adduser
+	# default), it requires owning the directory and file that hold its
+	# own executable (to safely self-update), and it refuses to write
+	# through a symlink (Claude Code and Codex persist their config
+	# across container rebuilds by symlinking these paths into a named
+	# volume; see their features' init scripts). Relax everything it
+	# checks, run install, then restore every bit of it exactly,
+	# regardless of whether install succeeds.
+	local_dirs=()
+	local_dirs_mode=()
+	for d in "${USER_HOME}/.local" "${USER_HOME}/.local/bin" "${USER_HOME}/.local/share"; do
+		if [[ -d "${d}" ]]; then
+			local_dirs+=("${d}")
+			local_dirs_mode+=("$(stat -c %a "${d}")")
+		fi
+	done
+
+	usr_local_bin_owner="$(stat -c %U /usr/local/bin)"
+	cbm_binary_owner=""
+	if [[ -e /usr/local/bin/codebase-memory-mcp ]]; then
+		cbm_binary_owner="$(stat -c %U /usr/local/bin/codebase-memory-mcp)"
+	fi
+
+	agent_paths=(
+		"${USER_HOME}/.claude"
+		"${USER_HOME}/.claude.json"
+		"${USER_HOME}/.codex/config.toml"
+	)
+	materialized_paths=()
+	materialized_targets=()
+
+	restore_activation_environment() {
+		for i in "${!materialized_paths[@]}"; do
+			p="${materialized_paths[${i}]}"
+			t="${materialized_targets[${i}]}"
+			rm -rf "${t}"
+			if [[ -e "${p}" ]]; then
+				cp -a "${p}" "${t}"
+			fi
+			rm -rf "${p}"
+			ln -sfn "${t}" "${p}"
+		done
+		chown "${usr_local_bin_owner}" /usr/local/bin
+		if [[ -n "${cbm_binary_owner}" ]] && [[ -e /usr/local/bin/codebase-memory-mcp ]]; then
+			chown "${cbm_binary_owner}" /usr/local/bin/codebase-memory-mcp
+		fi
+		for i in "${!local_dirs[@]}"; do
+			chmod "${local_dirs_mode[${i}]}" "${local_dirs[${i}]}"
+		done
+	}
+	trap restore_activation_environment EXIT
+
+	for d in "${local_dirs[@]}"; do
+		chmod go-w "${d}"
+	done
+	chown "${USER_NAME}" /usr/local/bin
+	if [[ -e /usr/local/bin/codebase-memory-mcp ]]; then
+		chown "${USER_NAME}" /usr/local/bin/codebase-memory-mcp
+	fi
+	for p in "${agent_paths[@]}"; do
+		if [[ -L "${p}" ]]; then
+			t="$(readlink -f "${p}")"
+			rm -f "${p}"
+			if [[ -e "${t}" ]]; then
+				cp -a "${t}" "${p}"
+			fi
+			materialized_paths+=("${p}")
+			materialized_targets+=("${t}")
+		fi
+	done
+
 	if [[ "${USER_NAME}" == "root" ]]; then
 		HOME="${USER_HOME}" codebase-memory-mcp install --yes
 	else
