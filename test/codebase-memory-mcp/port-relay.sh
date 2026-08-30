@@ -22,9 +22,19 @@ check "socat_installed" socat -V
 cat <<'SCRIPT' > /tmp/ui-notes-commands.sh
 #!/bin/bash
 set -e
+# The feature's entrypoint runs `codebase-memory-mcp install --yes` in the
+# background and can still be finishing it when this script starts; racing
+# it here causes the binary's self-install/fingerprint-verification routine
+# to fire again and evict whatever CBM session it collides with. Give it a
+# fixed head start before touching the binary at all.
+sleep 30
 (tail -f /dev/null | codebase-memory-mcp > /tmp/mcp.log 2>&1 &)
-sleep 1
-codebase-memory-mcp --ui=true --port=9749 &
+# `--ui=true` only attaches a UI to an already-running MCP session; it exits
+# immediately (successfully) if no session daemon exists yet, so wait for
+# the daemon the line above spawns before calling it. Also run it in the
+# foreground (no `&`) since it's a one-shot control command, not a server.
+timeout 30 bash -c 'until pgrep -f cbm-daemon-internal > /dev/null 2>&1; do sleep 0.5; done'
+codebase-memory-mcp --ui=true --port=9749
 timeout 10 bash -c 'until curl -sf http://127.0.0.1:9749 > /dev/null 2>&1; do sleep 0.5; done'
 socat TCP-LISTEN:9749,bind=$(hostname -I | awk '{print $1}'),fork,reuseaddr TCP:127.0.0.1:9749 &
 sleep 1
