@@ -42,6 +42,40 @@ else
 			"${USER_NAME}"
 fi
 
+# TEMP: Other Features (e.g. common-utils) may install bubblewrap as
+# part of their own general utility package list, independent of this
+# Feature. bubblewrap >=0.12.0 (containers/bubblewrap@c77dd38, merged
+# 2026-08-11) changed its proc-mount failure message to drop the
+# "/newroot/" prefix, which breaks Codex's fixed-string preflight check
+# (is_proc_mount_failure in codex-rs/linux-sandbox/src/linux_run_main.rs)
+# and silently disables the sandbox it builds afterward. Rather than
+# touching a package another Feature installed, hide any such bwrap
+# from Codex's own view of PATH so it always falls back to its bundled,
+# known-good bwrap; nothing else on the system is affected.
+#
+# The wrapper replaces ~/.local/bin/codex itself (not just the
+# /usr/local/bin/codex symlink below): the upstream installer adds
+# ~/.local/bin to the front of PATH via ~/.profile, so a new shell
+# would otherwise find the real binary there before it reaches
+# /usr/local/bin.
+# Remove this workaround once Codex's preflight check is fixed upstream.
+mv "${USER_HOME}/.local/bin/codex" "${USER_HOME}/.local/bin/codex.real"
+cat <<EOF > "${USER_HOME}/.local/bin/codex"
+#!/usr/bin/env bash
+set -eu
+# TEMP: hides system bwrap from Codex's PATH; see install.sh for why.
+new_path=""
+IFS=':' read -ra dirs <<< "\${PATH}"
+for dir in "\${dirs[@]}"; do
+	if [[ ! -e "\${dir}/bwrap" ]]; then
+		new_path="\${new_path:+\${new_path}:}\${dir}"
+	fi
+done
+PATH="\${new_path}" exec "${USER_HOME}/.local/bin/codex.real" "\$@"
+EOF
+chmod +x "${USER_HOME}/.local/bin/codex"
+chown "${USER_NAME}" "${USER_HOME}/.local/bin/codex" "${USER_HOME}/.local/bin/codex.real"
+
 ln -sf "${USER_HOME}/.local/bin/codex" /usr/local/bin/codex
 
 # Pre-create the mount point owned by the target user. The entrypoint may
