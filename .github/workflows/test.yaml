@@ -35,6 +35,7 @@ jobs:
         features:
           - bruno-cli
           - claude-code
+          - claude-mem
           - codebase-memory-mcp
           - codex
           - common-utils
