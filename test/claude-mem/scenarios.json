@@ -1,0 +1,17 @@
+{
+  "claude-mem-test": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "claude-mem": {}
+    }
+  },
+  "with-claude-code": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "claude-code": {},
+      "claude-mem": {}
+    }
+  }
+}

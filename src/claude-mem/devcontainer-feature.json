@@ -1,0 +1,40 @@
+{
+  "id": "claude-mem",
+  "version": "1.0.0",
+  "name": "Claude Mem",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/claude-mem",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install claude-mem and configure it to capture Claude Code/Codex session memory.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Enter a claude-mem npm version (e.g. '13.24.0'), or use 'latest'."
+    },
+    "ide": {
+      "type": "string",
+      "enum": ["claude-code", "codex-cli"],
+      "default": "claude-code",
+      "description": "Which IDE integration to register claude-mem hooks for."
+    },
+    "provider": {
+      "type": "string",
+      "enum": ["claude", "host"],
+      "default": "claude",
+      "description": "Which memory provider claude-mem uses to compress sessions. 'claude' reuses your logged-in Claude Code CLI's OAuth credentials (requires the claude-code feature/binary to be present, regardless of the 'ide' setting). 'host' expects an OpenAI-compatible server already listening on 127.0.0.1 (claude-mem does not start one itself) — Codex CLI does not expose such a server out of the box, so this option is only practical if you run your own bridge."
+    }
+  },
+  "mounts": [
+    {
+      "source": "claude-mem-cache-${devcontainerId}",
+      "target": "/usr/local/share/claude-mem-cache",
+      "type": "volume"
+    }
+  ],
+  "entrypoint": "/usr/local/share/claude-mem-init.sh",
+  "installsAfter": [
+    "ghcr.io/P-manBrown/devcontainer-features/claude-code",
+    "ghcr.io/P-manBrown/devcontainer-features/codex"
+  ]
+}
