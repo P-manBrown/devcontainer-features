@@ -23,13 +23,23 @@ By default, `CLAUDE_MEM_WORKER_HOST` is `127.0.0.1`, so the web UI only listens 
 "forwardPorts": [37700]
 ```
 
-The actual port is `37700 + (container UID % 100)`. Check it inside the container with:
+By default, the port is `37700 + (container UID % 100)`, which varies per user. To pin it to a fixed value (e.g. for `compose.yml` `ports`), set `CLAUDE_MEM_WORKER_PORT` explicitly:
+
+```jsonc
+"containerEnv": {
+  "CLAUDE_MEM_WORKER_HOST": "0.0.0.0",
+  "CLAUDE_MEM_WORKER_PORT": "37700"
+},
+"forwardPorts": [37700]
+```
+
+If you don't set `CLAUDE_MEM_WORKER_PORT`, check the calculated port inside the container with:
 
 ```bash
 echo $((37700 + $(id -u) % 100))
 ```
 
-Update `forwardPorts` if the calculated port is not 37700. This Feature does not install a `socat` or port-relay service.
+Update `forwardPorts` (or `compose.yml` `ports`) to match whichever port you end up using. This Feature does not install a `socat` or port-relay service.
 
 ## OAuth credentials on headless Linux
 
