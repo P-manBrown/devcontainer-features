@@ -5,5 +5,15 @@
     "features": {
       "rtk": {}
     }
+  },
+  "claude-code-hook": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "claude-code": {},
+      "rtk": {
+        "claudeCodeHook": true
+      }
+    }
   }
 }
