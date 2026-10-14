@@ -19,6 +19,11 @@ Install rtk, a CLI proxy that compresses bash command output to reduce LLM token
 | claudeCodeHook | On container start, run 'rtk init -g --auto-patch' to automatically set up a Claude Code PreToolUse hook and RTK.md. Requires the claude-code feature. | boolean | false |
 | codexHook | On container start, run 'rtk init -g --codex' to automatically set up Codex AGENTS.md/RTK.md integration. Requires the codex feature. | boolean | false |
 
+## Claude Code hook in worktrees
+
+With `claudeCodeHook` enabled, the registered command is `/usr/local/share/rtk-claude-hook/rtk hook claude`, a wrapper around `rtk hook claude`. Inside Claude Code worktrees (`/.claude/worktrees/`), commands whose rewrite would involve git are left unrewritten because Claude Code’s worktree isolation refuses git run as an operand of rtk. Everything else is compressed as usual.
+
+On each container start, the entrypoint normalizes `settings.json` to exactly one wrapper entry, leaving other hooks alone.
 
 
 ---
