@@ -1,5 +1,5 @@
 {
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:0-18",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -10,7 +10,25 @@
     }
   },
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:1": {}
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "configureZshAsDefaultShell": true,
+      "upgradePackages": false
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/P-manBrown/devcontainer-features/git-spice:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers-extra/features/bun:1": {},
+    "ghcr.io/P-manBrown/devcontainer-features/claude-code:1": {},
+    "ghcr.io/P-manBrown/devcontainer-features/claude-mem:1": {},
+    "ghcr.io/P-manBrown/devcontainer-features/codex:2": {},
+    "ghcr.io/P-manBrown/devcontainer-features/codebase-memory-mcp:2": {
+      "autoIndex": true,
+      "portRelay": true
+    },
+    "ghcr.io/P-manBrown/devcontainer-features/rtk:1": {
+      "claudeCodeHook": true
+    }
   },
   "remoteUser": "node",
   "postCreateCommand": "npm install -g @devcontainers/cli"
