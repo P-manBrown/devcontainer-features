@@ -30,6 +30,9 @@
       "claudeCodeHook": true
     }
   },
+  "mounts": [
+    "source=gh-config-${devcontainerId},target=/home/node/.config/gh,type=volume"
+  ],
   "remoteUser": "node",
-  "postCreateCommand": "npm install -g @devcontainers/cli"
+  "postCreateCommand": "bash ./.devcontainer/postCreateCommand.sh"
 }
