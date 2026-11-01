@@ -1,6 +1,6 @@
 {
   "id": "claude-code",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "name": "Claude Code",
   "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/claude-code",
   "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
@@ -28,8 +28,6 @@
   "entrypoint": "/usr/local/share/claude-code-init.sh",
   "installsAfter": [
     "ghcr.io/devcontainers/features/common-utils",
-    "ghcr.io/P-manBrown/devcontainer-features/common-utils",
-    "ghcr.io/devcontainers/features/git",
-    "ghcr.io/P-manBrown/devcontainer-features/git-from-src-fast"
+    "ghcr.io/devcontainers/features/git"
   ]
 }
