@@ -30,8 +30,6 @@
   "entrypoint": "/usr/local/share/codex-init.sh",
   "installsAfter": [
     "ghcr.io/devcontainers/features/common-utils",
-    "ghcr.io/P-manBrown/devcontainer-features/common-utils",
-    "ghcr.io/devcontainers/features/git",
-    "ghcr.io/P-manBrown/devcontainer-features/git-from-src-fast"
+    "ghcr.io/devcontainers/features/git"
   ]
 }
