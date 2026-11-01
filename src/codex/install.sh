@@ -49,9 +49,14 @@ fi
 # "/newroot/" prefix, which breaks Codex's fixed-string preflight check
 # (is_proc_mount_failure in codex-rs/linux-sandbox/src/linux_run_main.rs)
 # and silently disables the sandbox it builds afterward. Rather than
-# touching a package another Feature installed, hide any such bwrap
-# from Codex's own view of PATH so it always falls back to its bundled,
-# known-good bwrap; nothing else on the system is affected.
+# touching a package another Feature installed, the wrapper puts Codex's
+# bundled, known-good bwrap first on Codex's own PATH, from a directory
+# that contains nothing but that bwrap; the rest of PATH (including
+# /usr/bin) stays intact and nothing else on the system is affected.
+# The link goes through the "current" symlink so it survives Codex
+# self-updates. Known limitation: if a Codex release stops shipping the
+# bundled bwrap, PATH lookup skips the dangling link and Codex falls
+# back to the system bwrap.
 #
 # The wrapper replaces ~/.local/bin/codex itself (not just the
 # /usr/local/bin/codex symlink below): the upstream installer adds
@@ -59,19 +64,20 @@ fi
 # would otherwise find the real binary there before it reaches
 # /usr/local/bin.
 # Remove this workaround once Codex's preflight check is fixed upstream.
+BWRAP_DIR="${USER_HOME}/.local/share/codex-bwrap"
+if [[ ! -d "${USER_HOME}/.local/share" ]]; then
+	mkdir "${USER_HOME}/.local/share"
+	chown "${USER_NAME}" "${USER_HOME}/.local/share"
+fi
+mkdir -p "${BWRAP_DIR}"
+ln -sfn "${USER_HOME}/.codex/packages/standalone/current/codex-resources/bwrap" "${BWRAP_DIR}/bwrap"
+chown -h "${USER_NAME}" "${BWRAP_DIR}" "${BWRAP_DIR}/bwrap"
 mv "${USER_HOME}/.local/bin/codex" "${USER_HOME}/.local/bin/codex.real"
 cat <<EOF > "${USER_HOME}/.local/bin/codex"
 #!/usr/bin/env bash
 set -eu
-# TEMP: hides system bwrap from Codex's PATH; see install.sh for why.
-new_path=""
-IFS=':' read -ra dirs <<< "\${PATH}"
-for dir in "\${dirs[@]}"; do
-	if [[ ! -e "\${dir}/bwrap" ]]; then
-		new_path="\${new_path:+\${new_path}:}\${dir}"
-	fi
-done
-PATH="\${new_path}" exec "${USER_HOME}/.local/bin/codex.real" "\$@"
+# TEMP: puts Codex's bundled bwrap first on Codex's PATH; see install.sh for why.
+PATH="${BWRAP_DIR}:\${PATH}" exec "${USER_HOME}/.local/bin/codex.real" "\$@"
 EOF
 chmod +x "${USER_HOME}/.local/bin/codex"
 chown "${USER_NAME}" "${USER_HOME}/.local/bin/codex" "${USER_HOME}/.local/bin/codex.real"
