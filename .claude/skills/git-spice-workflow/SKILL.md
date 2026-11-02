@@ -98,3 +98,4 @@ git-spice使用。スタック型ブランチ管理。
 ### 異常時
 
 - 確認項目が1つでも想定と異なれば、その場で止めてユーザーへ報告する
+- 1本ごとの手順の手順3（`git-spice repo sync --restack=aboves`）の後で止まり、やり直すときは、`repo sync`はマージを取り込み済みで次のブランチを積み直さない。`git-spice branch restack --branch <次のブランチ>`でそのブランチだけをmainの上に積み直し、差分がそのブランチの変更だけになったことを確かめてから、手順4（`git-spice branch submit --branch <次のブランチ>`）へ進む
