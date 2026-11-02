@@ -93,7 +93,8 @@ git-spice使用。スタック型ブランチ管理。
 ### 完了時の確認
 
 - マージしたブランチがローカル・リモートとも残っていない
-- `git-spice log short --all`で`needs restack`・`needs push`が表示されない。表示される場合は、`git-spice repo restack`と、該当スタックでの`git-spice stack submit`を実行し、再度確認する
+- 手順3（`git-spice repo sync --restack=aboves`）では、マージしたスタックの上に積まれた別のブランチも積み直される。そのうちGitHubにPRがあるものだけを`git-spice branch submit --update-only --branch <ブランチ>`でpushする。PRが無い（ローカルにしか無い）ブランチは、ローカルで積み直されるがpushしない
+- ほかのスタックや、ローカルにしか無いブランチに`needs restack`・`needs push`が表示されても何もしない（`git-spice repo restack`・`git-spice stack submit`は実行しない）
 
 ### 異常時
 
