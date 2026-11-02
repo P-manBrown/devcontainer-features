@@ -49,9 +49,24 @@ fi
 # "/newroot/" prefix, which breaks Codex's fixed-string preflight check
 # (is_proc_mount_failure in codex-rs/linux-sandbox/src/linux_run_main.rs)
 # and silently disables the sandbox it builds afterward. Rather than
-# touching a package another Feature installed, hide any such bwrap
-# from Codex's own view of PATH so it always falls back to its bundled,
-# known-good bwrap; nothing else on the system is affected.
+# touching a package another Feature installed, the wrapper puts Codex's
+# bundled, known-good bwrap first on Codex's own PATH, from a directory
+# that contains nothing but that bwrap; the rest of PATH (including
+# /usr/bin) stays intact and nothing else on the system is affected.
+# The directory sits outside the user's home on purpose: Codex skips a
+# PATH bwrap whose real path lies under its working directory, so a link
+# into ~/.codex would be ignored (falling back to the system bwrap) when
+# Codex starts from $HOME. It is not created at build time either: the
+# dev container tooling can remap the user's UID after the build, which
+# would leave a build-time directory owned by the old UID. Instead the
+# wrapper prepares /tmp/codex-bwrap-<UID> (mode 700, owned by whoever
+# starts Codex) on every start and refreshes the copy of the bundled
+# bwrap from the "current" symlink, so it follows Codex self-updates. An
+# existing directory that is a symlink or belongs to someone else is
+# never used; the wrapper stops with an error instead. If a Codex release
+# stops shipping the bundled bwrap, nothing is refreshed and the last
+# copy stays in use. Codex skips the copy when it starts from /tmp or
+# below, which is acceptable.
 #
 # The wrapper replaces ~/.local/bin/codex itself (not just the
 # /usr/local/bin/codex symlink below): the upstream installer adds
@@ -59,19 +74,27 @@ fi
 # would otherwise find the real binary there before it reaches
 # /usr/local/bin.
 # Remove this workaround once Codex's preflight check is fixed upstream.
+BWRAP_SRC="${USER_HOME}/.codex/packages/standalone/current/codex-resources/bwrap"
 mv "${USER_HOME}/.local/bin/codex" "${USER_HOME}/.local/bin/codex.real"
 cat <<EOF > "${USER_HOME}/.local/bin/codex"
 #!/usr/bin/env bash
 set -eu
-# TEMP: hides system bwrap from Codex's PATH; see install.sh for why.
-new_path=""
-IFS=':' read -ra dirs <<< "\${PATH}"
-for dir in "\${dirs[@]}"; do
-	if [[ ! -e "\${dir}/bwrap" ]]; then
-		new_path="\${new_path:+\${new_path}:}\${dir}"
-	fi
-done
-PATH="\${new_path}" exec "${USER_HOME}/.local/bin/codex.real" "\$@"
+# TEMP: puts Codex's bundled bwrap first on Codex's PATH; see install.sh for why.
+BWRAP_DIR="/tmp/codex-bwrap-\$(id -u)"
+mkdir -m 700 "\${BWRAP_DIR}" 2> /dev/null || true
+if [[ -L "\${BWRAP_DIR}" ]] || [[ ! -d "\${BWRAP_DIR}" ]] \\
+	|| [[ "\$(stat -c '%u %a' "\${BWRAP_DIR}")" != "\$(id -u) 700" ]]; then
+	echo "ERROR: \${BWRAP_DIR} is not a mode 700 directory owned by you; refusing to use it." >&2
+	exit 1
+fi
+if [[ -x "${BWRAP_SRC}" ]] && ! cmp -s "${BWRAP_SRC}" "\${BWRAP_DIR}/bwrap"; then
+	# Replace atomically so a running Codex never executes a half-written file.
+	cp "${BWRAP_SRC}" "\${BWRAP_DIR}/bwrap.tmp.\$\$" \\
+		&& chmod 755 "\${BWRAP_DIR}/bwrap.tmp.\$\$" \\
+		&& mv -f "\${BWRAP_DIR}/bwrap.tmp.\$\$" "\${BWRAP_DIR}/bwrap" \\
+		|| rm -f "\${BWRAP_DIR}/bwrap.tmp.\$\$"
+fi
+PATH="\${BWRAP_DIR}:\${PATH}" exec "${USER_HOME}/.local/bin/codex.real" "\$@"
 EOF
 chmod +x "${USER_HOME}/.local/bin/codex"
 chown "${USER_NAME}" "${USER_HOME}/.local/bin/codex" "${USER_HOME}/.local/bin/codex.real"
