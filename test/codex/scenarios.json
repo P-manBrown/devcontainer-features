@@ -5,13 +5,5 @@
     "features": {
       "codex": {}
     }
-  },
-  "with-system-bwrap": {
-    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-    "remoteUser": "vscode",
-    "features": {
-      "ghcr.io/devcontainers/features/common-utils:2": {},
-      "codex": {}
-    }
   }
 }
