@@ -35,10 +35,10 @@
       "resolved": "ghcr.io/p-manbrown/devcontainer-features/codebase-memory-mcp@sha256:b73b70d445874e583ef1fe1949ff8eeb1dd0d5f9bd9ca98f400606e97bad1847",
       "integrity": "sha256:b73b70d445874e583ef1fe1949ff8eeb1dd0d5f9bd9ca98f400606e97bad1847"
     },
-    "ghcr.io/P-manBrown/devcontainer-features/codex:2": {
-      "version": "2.0.2",
-      "resolved": "ghcr.io/p-manbrown/devcontainer-features/codex@sha256:b66ea7a3f71dffe193651c1ca8ddbc6027e0f6b784bf423a99b97b00bc56ac67",
-      "integrity": "sha256:b66ea7a3f71dffe193651c1ca8ddbc6027e0f6b784bf423a99b97b00bc56ac67"
+    "ghcr.io/P-manBrown/devcontainer-features/codex:3": {
+      "version": "3.0.0",
+      "resolved": "ghcr.io/p-manbrown/devcontainer-features/codex@sha256:cee350fa12fdd6c6e576e19ea81323110c8e4a63e3a0e3f34dc3e382c4b433b1",
+      "integrity": "sha256:cee350fa12fdd6c6e576e19ea81323110c8e4a63e3a0e3f34dc3e382c4b433b1"
     },
     "ghcr.io/P-manBrown/devcontainer-features/git-spice:1": {
       "version": "1.1.0",
