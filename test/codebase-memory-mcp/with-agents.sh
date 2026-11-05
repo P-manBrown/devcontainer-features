@@ -9,8 +9,12 @@ check "codebase_memory_mcp_version" codebase-memory-mcp --version
 
 # The entrypoint's install runs as part of the container's startup
 # process, asynchronously to this test script; wait for it to finish
-# writing the agent config instead of racing it.
-timeout 30 bash -c 'until grep -q codebase-memory-mcp "${HOME}/.claude.json" 2>/dev/null; do sleep 1; done'
+# instead of racing it. The installer writes the config first, and
+# install.sh restores the symlinks afterward in an EXIT trap, so wait
+# for both. If either never happens, the wait times out and the checks
+# below report which one is missing.
+timeout 60 bash -c 'until grep -q codebase-memory-mcp "${HOME}/.claude.json" 2>/dev/null \
+	&& [ -L "${HOME}/.claude.json" ] && [ -L "${HOME}/.codex/config.toml" ]; do sleep 1; done' || true
 
 # Claude Code and Codex persist their config across container rebuilds by
 # symlinking it into a named volume (see their features' init scripts).
