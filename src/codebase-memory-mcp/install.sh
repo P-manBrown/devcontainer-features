@@ -208,6 +208,17 @@ cat <<-'EOF' > /usr/local/share/codebase-memory-mcp-init.sh
 	materialized_paths=()
 	materialized_targets=()
 
+	# CBM only configures Codex when ~/.codex exists. The Codex Feature's
+	# start script creates that link, but some editors ignore installsAfter
+	# and run this script first. Create the directory so Codex is
+	# configured either way; Codex's start script later merges it into
+	# the volume and replaces it with the link.
+	if [[ -x "${USER_HOME}/.local/bin/codex" ]] \
+		&& [[ ! -e "${USER_HOME}/.codex" ]] && [[ ! -L "${USER_HOME}/.codex" ]]; then
+		mkdir -p "${USER_HOME}/.codex"
+		chown "${USER_NAME}" "${USER_HOME}/.codex"
+	fi
+
 	restore_activation_environment() {
 		for i in "${!materialized_paths[@]}"; do
 			p="${materialized_paths[${i}]}"
