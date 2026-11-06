@@ -25,7 +25,7 @@ If `~/.codex` is a symlink to some other place, it is left unchanged and a warni
 
 ### Upgrading from 3.0.0
 
-Version 3.0.0 of this Feature linked a few files in `~/.codex` into the volume one by one. Codex saves `auth.json` by replacing the file, which broke that link, so a login made under 3.0.0 may exist only in the container and not in the volume. Before you rebuild the container with this version, run this in the old container to copy that login into the volume:
+Version 3.0.0 of this Feature linked a few files in `~/.codex` into the volume one by one. How Codex writes auth.json depends on the command: a browser login (codex login --device-auth) replaces the link with a regular file, and codex logout deletes the link, while an API key login (codex login --with-api-key) writes through the link to its target. Linking the whole ~/.codex directory keeps the login in the volume in every case. That broke the per-file link, so a login made under 3.0.0 may exist only in the container and not in the volume. Before you rebuild the container with this version, run this in the old container to copy that login into the volume:
 
 ```sh
 [ -L ~/.codex/auth.json ] || cp ~/.codex/auth.json /usr/local/share/codex-config/auth.json
