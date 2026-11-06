@@ -175,10 +175,10 @@ cat <<-'EOF' > /usr/local/share/codebase-memory-mcp-init.sh
 	# default), it requires owning the directory and file that hold its
 	# own executable (to safely self-update), and it refuses to write
 	# through a symlink (Claude Code and Codex persist their config
-	# across container rebuilds by symlinking these paths into a named
-	# volume; see their features' init scripts). Relax everything it
-	# checks, run install, then restore every bit of it exactly,
-	# regardless of whether install succeeds.
+	# across container rebuilds by symlinking it into a named volume;
+	# see their features' init scripts). Relax everything it checks, run
+	# install, then restore every bit of it exactly, regardless of
+	# whether install succeeds.
 	local_dirs=()
 	local_dirs_mode=()
 	for d in "${USER_HOME}/.local" "${USER_HOME}/.local/bin" "${USER_HOME}/.local/share"; do
@@ -194,21 +194,44 @@ cat <<-'EOF' > /usr/local/share/codebase-memory-mcp-init.sh
 		cbm_binary_owner="$(stat -c %U /usr/local/bin/codebase-memory-mcp)"
 	fi
 
+	# Codex Feature 3.0.1 and later link the whole ~/.codex directory;
+	# 3.0.0 linked ~/.codex/config.toml (and other files) one by one.
+	# Only one of the two Codex entries below is ever a symlink. The
+	# directory comes first: once it is materialized, config.toml inside
+	# it is a regular file and is skipped.
 	agent_paths=(
 		"${USER_HOME}/.claude"
 		"${USER_HOME}/.claude.json"
+		"${USER_HOME}/.codex"
 		"${USER_HOME}/.codex/config.toml"
 	)
 	materialized_paths=()
 	materialized_targets=()
 
+	# CBM only configures Codex when ~/.codex exists. The Codex Feature's
+	# start script creates that link, but some editors ignore installsAfter
+	# and run this script first. Create the directory so Codex is
+	# configured either way; Codex's start script later merges it into
+	# the volume and replaces it with the link.
+	if [[ -x "${USER_HOME}/.local/bin/codex" ]] \
+		&& [[ ! -e "${USER_HOME}/.codex" ]] && [[ ! -L "${USER_HOME}/.codex" ]]; then
+		mkdir -p "${USER_HOME}/.codex"
+		chown "${USER_NAME}" "${USER_HOME}/.codex"
+	fi
+
 	restore_activation_environment() {
 		for i in "${!materialized_paths[@]}"; do
 			p="${materialized_paths[${i}]}"
 			t="${materialized_targets[${i}]}"
-			rm -rf "${t}"
+			# Copy next to the target and swap with a rename, so an interrupted
+			# restore never leaves a partial copy in place of the volume data.
+			rm -rf "${t}.restore"
 			if [[ -e "${p}" ]]; then
-				cp -a "${p}" "${t}"
+				cp -a "${p}" "${t}.restore"
+			fi
+			rm -rf "${t}"
+			if [[ -e "${t}.restore" ]]; then
+				mv "${t}.restore" "${t}"
 			fi
 			rm -rf "${p}"
 			ln -sfn "${t}" "${p}"
@@ -233,9 +256,16 @@ cat <<-'EOF' > /usr/local/share/codebase-memory-mcp-init.sh
 	for p in "${agent_paths[@]}"; do
 		if [[ -L "${p}" ]]; then
 			t="$(readlink -f "${p}")"
-			rm -f "${p}"
+			# Copy next to the link first and drop the link only after the copy
+			# succeeded, so a failed or interrupted copy never leaves a partial
+			# real directory that the codex start script would merge back.
+			rm -rf "${p}.materialize"
 			if [[ -e "${t}" ]]; then
-				cp -a "${t}" "${p}"
+				cp -a "${t}" "${p}.materialize"
+			fi
+			rm -f "${p}"
+			if [[ -e "${p}.materialize" ]]; then
+				mv "${p}.materialize" "${p}"
 			fi
 			materialized_paths+=("${p}")
 			materialized_targets+=("${t}")

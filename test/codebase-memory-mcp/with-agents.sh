@@ -14,17 +14,20 @@ check "codebase_memory_mcp_version" codebase-memory-mcp --version
 # for both. If either never happens, the wait times out and the checks
 # below report which one is missing.
 timeout 60 bash -c 'until grep -q codebase-memory-mcp "${HOME}/.claude.json" 2>/dev/null \
-	&& [ -L "${HOME}/.claude.json" ] && [ -L "${HOME}/.codex/config.toml" ]; do sleep 1; done' || true
+	&& [ -L "${HOME}/.claude.json" ] && [ -L "${HOME}/.codex" ]; do sleep 1; done' || true
 
 # Claude Code and Codex persist their config across container rebuilds by
-# symlinking it into a named volume (see their features' init scripts).
-# codebase-memory-mcp's installer refuses to write through a symlink, so
-# these checks confirm install.sh's materialize-then-restore workaround
-# both configured each agent and left the symlink intact afterward.
+# symlinking it into a named volume (see their features' init scripts);
+# Codex links its whole ~/.codex directory. codebase-memory-mcp's
+# installer refuses to write through a symlink, so these checks confirm
+# install.sh's materialize-then-restore workaround both configured each
+# agent and left the symlink intact afterward.
 check "claude_code_mcp_configured" bash -c 'grep -q codebase-memory-mcp "${HOME}/.claude.json"'
 check "claude_json_still_symlink" bash -c '[ -L "${HOME}/.claude.json" ]'
 check "codex_mcp_configured" bash -c 'grep -q codebase-memory-mcp "${HOME}/.codex/config.toml"'
-check "codex_config_still_symlink" bash -c '[ -L "${HOME}/.codex/config.toml" ]'
+check "codex_dir_still_symlink" bash -c '[ -L "${HOME}/.codex" ]'
+
+check "no_restore_leftover" bash -c '[ ! -e /usr/local/share/codex-config/codex.restore ]'
 
 # Report result
 reportResults
