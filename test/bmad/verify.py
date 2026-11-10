@@ -44,6 +44,7 @@ def verify():
     options = json.loads((FEATURE / 'options.json').read_text())
     inventories = {}
     module_versions = {}
+    tea_defaults = {}
     with tempfile.TemporaryDirectory(prefix='bmad-verification-') as temp:
         base = Path(temp)
         for modules in ('bmm', 'bmm,tea'):
@@ -56,6 +57,7 @@ def verify():
                           for p in (template / folder / 'skills').glob('*/SKILL.md')]
             inventories[modules] = all_skills
             module_versions[modules] = {m['name']: m['version'] for m in manifest(template)['modules']}
+            tea_defaults[modules] = resolved(template).get('modules', {}).get('tea', {})
             for tools in ('claude-code', 'codex', 'claude-code,codex'):
                 for communication, document in itertools.product(('English', 'Japanese'), repeat=2):
                     root = base / f'{modules}-{tools}-{communication}-{document}'
@@ -91,18 +93,26 @@ def verify():
                     assert installed['core'] == installed['bmm'] == options['bmad']
                     if modules == 'bmm,tea':
                         assert installed['tea'] == options['tea']
-                        assert values['modules']['tea']['tea_use_playwright_utils'] is False
-                        assert values['modules']['tea']['tea_use_pactjs_utils'] is False
+                        for key in ('tea_use_playwright_utils', 'tea_use_pactjs_utils',
+                                    'tea_pact_mcp', 'tea_browser_automation'):
+                            expected = tea_defaults[modules][key]
+                            assert values['modules']['tea'][key] == expected
+                            assert type(values['modules']['tea'][key]) is type(expected)
                         yaml_values = json.loads(run('node', '-e',
                             'const fs=require("fs"),yaml=require(process.argv[1]);'
                             'console.log(JSON.stringify(yaml.parse(fs.readFileSync(process.argv[2],"utf8"))))',
                             str(FEATURE / 'runtime/node_modules/yaml'), str(project / '_bmad/tea/config.yaml')))
-                        assert yaml_values['tea_use_playwright_utils'] is False
-                        assert yaml_values['tea_use_pactjs_utils'] is False
+                        for key in ('tea_use_playwright_utils', 'tea_use_pactjs_utils'):
+                            assert yaml_values[key] == tea_defaults[modules][key]
+                            assert type(yaml_values[key]) is bool
                     assert all(p.stat().st_uid == os.getuid() for p in project.rglob('*'))
                     custom = project / '_bmad/custom/config.user.toml'
                     custom.write_text('[core]\ncommunication_language = "Japanese"\n'
                                       'document_output_language = "English"\nuser_name = "Local User"\n')
+                    if modules == 'bmm,tea':
+                        with custom.open('a') as file:
+                            file.write('[modules.tea]\ntea_use_playwright_utils = false\n')
+                    custom_text = custom.read_text()
                     before = snapshot(project)
                     # Language option changes do not overwrite existing configuration.
                     options.update(communication='English', document='Japanese')
@@ -128,7 +138,9 @@ def verify():
                         state_path.write_text(json.dumps(state))
                     run('python3', str(copied / 'setup.py'), str(project))
                     assert manifest(project)['installation']['version'] == options['bmad']
-                    assert custom.read_text().endswith('user_name = "Local User"\n')
+                    assert custom.read_text() == custom_text
+                    if modules == 'bmm,tea':
+                        assert resolved(project)['modules']['tea']['tea_use_playwright_utils'] is False
                     assert resolved(project)['core']['user_name'] == 'Local User'
                     print(f'PASS {modules} / {tools} / {communication} / {document}', flush=True)
         # Change the actual selection on an existing project.
@@ -161,7 +173,7 @@ def verify():
         assert snapshot(project) == before
         print('PASS modified generated skill protection', flush=True)
         # Simulate a failure after official generation, then retry. The pending
-        # ownership record must allow repair, including the false-string fix.
+        # ownership record must allow repair without replacing official defaults.
         retry_project = base / 'retry'
         retry_project.mkdir()
         existing_custom = retry_project / '_bmad/custom/config.user.toml'
@@ -180,7 +192,11 @@ def verify():
         pending = json.loads((retry_project / '_bmad/.devcontainer-feature.json').read_text())
         assert 'configuration' not in pending
         run('python3', str(fixture / 'setup.py'), str(retry_project))
-        assert resolved(retry_project)['modules']['tea']['tea_use_playwright_utils'] is False
+        retry_values = resolved(retry_project)['modules']['tea']
+        for key in ('tea_use_playwright_utils', 'tea_use_pactjs_utils',
+                    'tea_pact_mcp', 'tea_browser_automation'):
+            assert retry_values[key] == tea_defaults['bmm,tea'][key]
+            assert type(retry_values[key]) is type(tea_defaults['bmm,tea'][key])
         assert existing_custom.read_text() == '[core]\ncommunication_language="Japanese"\n'
         print('PASS partial install retry and preexisting customization', flush=True)
         # Name collisions fail without modifying existing skills.

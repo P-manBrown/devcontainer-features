@@ -119,7 +119,7 @@ EOF2
 chmod 755 "$ROOT/bin/bmad"
 # Check the interface we actually use, rather than requiring a listed version.
 install_help=$(bmad install --help)
-for flag in --directory --modules --tools --action --set --pin --no-shims --yes \
+for flag in --directory --modules --tools --action --pin --no-shims --yes \
 	--user-name --communication-language --document-output-language; do
 	if ! grep -qF -- "$flag" <<< "$install_help"; then
 		echo "ERROR: BMAD $resolved_version installer lacks required option $flag." >&2

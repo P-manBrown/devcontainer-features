@@ -149,14 +149,6 @@ def setup(project):
                           ('document_output_language', '--document-output-language')):
             if key in core:
                 args += [flag, str(core[key])]
-    # Adding TEA also needs safe defaults. Do not rewrite existing TEA answers.
-    new_tea = ('tea' in OPTIONS['modules'].split(',')
-               and (not (bmad / 'tea').exists() or state.get('initialize_tea', False)))
-    if new_tea:
-        args += ['--set', 'tea.tea_use_playwright_utils=false',
-                 '--set', 'tea.tea_use_pactjs_utils=false',
-                 '--set', 'tea.tea_pact_mcp=none',
-                 '--set', 'tea.tea_browser_automation=none']
     with tempfile.TemporaryDirectory(prefix='bmad-installer-') as temp:
         home = Path(temp)
         cache = ROOT / 'installer-cache'
@@ -173,29 +165,7 @@ def setup(project):
                 owned = set(old_skills) | wanted
                 pending = {name: skill_hashes(skill_directory(project, name)) for name in owned
                            if skill_directory(project, name).is_dir()}
-                save_state(state_path, dict(skills=pending, initialize_tea=new_tea))
-    if new_tea:
-        # v6.12.4 --set emits strings for false, including in TOML. Correct
-        # only the two values supplied above, then verify the actual resolver.
-        file = bmad / 'config.toml'
-        text = file.read_text()
-        for key in ('tea_use_playwright_utils', 'tea_use_pactjs_utils'):
-            text = text.replace(f'{key} = "false"', f'{key} = false')
-        file.write_text(text)
-        file = bmad / 'tea/config.yaml'
-        if file.exists():
-            text = file.read_text()
-            for key in ('tea_use_playwright_utils', 'tea_use_pactjs_utils'):
-                for quote in ('"', "'"):
-                    text = text.replace(f'{key}: {quote}false{quote}', f'{key}: false')
-            file.write_text(text)
-        output = subprocess.check_output(
-            ['python3', str(bmad / 'scripts/resolve_config.py'), '--project-root', str(project)],
-            text=True)
-        values = json.loads(output)['modules']['tea']
-        for key in ('tea_use_playwright_utils', 'tea_use_pactjs_utils'):
-            if not isinstance(values[key], bool):
-                raise RuntimeError(f'Expected boolean from BMAD resolver for {key}')
+                save_state(state_path, dict(skills=pending))
     # Remove only previously owned, unmodified skill trees on deselection.
     for name in old_skills.keys() - wanted:
         directory = skill_directory(project, name)
