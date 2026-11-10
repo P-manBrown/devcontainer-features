@@ -1,0 +1,66 @@
+{
+  "id": "bmad",
+  "version": "1.0.0",
+  "name": "BMAD Method",
+  "description": "Install BMAD Core/BMM and optional compatible TEA with project-scoped skills.",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/bmad",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": [
+        "latest",
+        "6.12.4"
+      ],
+      "default": "latest",
+      "description": "Exact stable BMAD version, or latest to resolve the official npm stable tag at image build time."
+    },
+    "modules": {
+      "type": "string",
+      "default": "bmm",
+      "enum": [
+        "bmm",
+        "bmm,tea"
+      ],
+      "description": "Modules to install alongside Core. The selected BMAD release controls official module selection; resolved versions are recorded in the image."
+    },
+    "tools": {
+      "type": "string",
+      "default": "codex",
+      "enum": [
+        "claude-code",
+        "codex",
+        "claude-code,codex"
+      ],
+      "description": "BMAD skill integrations; does not install the AI tools themselves."
+    },
+    "communicationLanguage": {
+      "type": "string",
+      "default": "Japanese",
+      "enum": [
+        "English",
+        "Japanese"
+      ],
+      "description": "Initial conversation language. Existing project settings take precedence."
+    },
+    "documentOutputLanguage": {
+      "type": "string",
+      "default": "Japanese",
+      "enum": [
+        "English",
+        "Japanese"
+      ],
+      "description": "Initial document language. Existing project settings take precedence."
+    }
+  },
+  "containerEnv": {
+    "PATH": "/usr/local/share/bmad-feature/bin:${PATH}",
+    "UV_PYTHON_DOWNLOADS": "never"
+  },
+  "entrypoint": "/usr/local/share/bmad-feature/init.sh",
+  "postStartCommand": "/usr/local/bin/bmad-setup",
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/devcontainers/features/git"
+  ]
+}

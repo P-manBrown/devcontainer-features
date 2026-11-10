@@ -1,0 +1,22 @@
+{
+  "bmad-test": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "bmad": {}
+    }
+  },
+  "with-node": {
+    "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
+    "remoteUser": "node",
+    "features": {
+      "bmad": {
+        "modules": "bmm,tea",
+        "tools": "claude-code,codex",
+        "communicationLanguage": "Japanese",
+        "documentOutputLanguage": "Japanese",
+        "version": "6.12.3"
+      }
+    }
+  }
+}
