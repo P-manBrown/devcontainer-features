@@ -2,13 +2,13 @@
 
 `version` accepts an exact stable BMAD version or `latest` (default). `latest` resolves the official npm stable tag once at image build time; restarts do not check for newer releases. An uncached rebuild with `latest` can select a newer release, subject to the compatibility check. Specify `version: "6.12.4"` when sharing an exact, reproducible selection.
 
-The currently verified compatibility table is:
+The versions verified and accepted by **this Feature** are:
 
 | BMAD Core/BMM | TEA |
 | --- | --- |
 | 6.12.4 | 1.27.2 |
 
-The Feature selects the matching TEA version automatically. Unsupported BMAD versions fail with an explicit error, including when a future `latest` resolves outside this table. The Feature never silently falls back to an older version. TEA 4.x and v7 use different installation/configuration models and need explicit support before they can be selected. Supported installers ship with a tested npm dependency lock; module compatibility remains managed by the Feature.
+The Feature currently accepts **only BMAD 6.12.4**, selecting TEA 1.27.2 automatically when requested. Here, an "unsupported" version means one not verified and registered in this Feature; it does not mean that BMAD itself is unsupported upstream or known to be incompatible. Other versions fail with an explicit error, including when a future `latest` resolves outside this table. Accepting a new version requires updating and checking this Feature’s installer integration, TEA pairing, and npm dependency lock. The Feature never silently falls back to an older version. TEA 4.x and v7 use different installation/configuration models and need separate integration work.
 
 `modules` accepts `bmm` (default) or `bmm,tea`. `tools` accepts `claude-code`, `codex` (default), or `claude-code,codex`. Each language option accepts `English` or `Japanese` (default).
 
@@ -30,7 +30,6 @@ The base must be a glibc Debian/Ubuntu Linux image, x86_64 or aarch64, with Bash
 ## Workspace setup and Zed
 
 Tools are installed at image build time, without accessing a user repository. Project setup normally runs through the Feature’s `postStartCommand`, from the workspace and as the configured remote user. No workspace environment variable is required when the editor runs Feature lifecycle hooks:
-
 
 ```jsonc
 "features": {
