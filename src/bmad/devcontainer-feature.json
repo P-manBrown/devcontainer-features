@@ -2,32 +2,54 @@
   "id": "bmad",
   "version": "1.0.0",
   "name": "BMAD Method",
-  "description": "Install pinned BMAD Core/BMM and optional TEA with project-scoped skills.",
+  "description": "Install BMAD Core/BMM and optional compatible TEA with project-scoped skills.",
   "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/bmad",
   "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
   "options": {
+    "version": {
+      "type": "string",
+      "proposals": [
+        "latest",
+        "6.12.4"
+      ],
+      "default": "latest",
+      "description": "BMAD version or latest (official npm stable tag). Unsupported versions fail the Feature compatibility check."
+    },
     "modules": {
       "type": "string",
       "default": "bmm",
-      "enum": ["bmm", "bmm,tea"],
+      "enum": [
+        "bmm",
+        "bmm,tea"
+      ],
       "description": "Modules to install alongside Core (versions managed by this Feature)."
     },
     "tools": {
       "type": "string",
-      "default": "claude-code",
-      "enum": ["claude-code", "codex", "claude-code,codex"],
+      "default": "codex",
+      "enum": [
+        "claude-code",
+        "codex",
+        "claude-code,codex"
+      ],
       "description": "BMAD skill integrations; does not install the AI tools themselves."
     },
     "communicationLanguage": {
       "type": "string",
-      "default": "English",
-      "enum": ["English", "Japanese"],
+      "default": "Japanese",
+      "enum": [
+        "English",
+        "Japanese"
+      ],
       "description": "Initial conversation language. Existing project settings take precedence."
     },
     "documentOutputLanguage": {
       "type": "string",
-      "default": "English",
-      "enum": ["English", "Japanese"],
+      "default": "Japanese",
+      "enum": [
+        "English",
+        "Japanese"
+      ],
       "description": "Initial document language. Existing project settings take precedence."
     }
   },
@@ -37,5 +59,8 @@
   },
   "entrypoint": "/usr/local/share/bmad-feature/init.sh",
   "postStartCommand": "/usr/local/bin/bmad-setup",
-  "installsAfter": ["ghcr.io/devcontainers/features/common-utils", "ghcr.io/devcontainers/features/git"]
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/devcontainers/features/git"
+  ]
 }

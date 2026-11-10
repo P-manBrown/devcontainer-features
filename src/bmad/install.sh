@@ -5,10 +5,15 @@ set -euo pipefail
 USER_NAME="${_REMOTE_USER}"
 USER_HOME="${_REMOTE_USER_HOME}"
 ROOT=/usr/local/share/bmad-feature
+VERSION="${VERSION:-latest}"
 MODULES="${MODULES:-bmm}"
-TOOLS="${TOOLS:-claude-code}"
-COMMUNICATIONLANGUAGE="${COMMUNICATIONLANGUAGE:-English}"
-DOCUMENTOUTPUTLANGUAGE="${DOCUMENTOUTPUTLANGUAGE:-English}"
+TOOLS="${TOOLS:-codex}"
+COMMUNICATIONLANGUAGE="${COMMUNICATIONLANGUAGE:-Japanese}"
+DOCUMENTOUTPUTLANGUAGE="${DOCUMENTOUTPUTLANGUAGE:-Japanese}"
+if [[ "$VERSION" != latest && ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+	echo 'ERROR: version must be latest or an exact stable BMAD version (e.g. 6.12.4).' >&2
+	exit 1
+fi
 case "$MODULES" in bmm|bmm,tea) ;; *) echo 'Invalid modules' >&2; exit 1 ;; esac
 case "$TOOLS" in claude-code|codex|claude-code,codex) ;; *) echo 'Invalid tools' >&2; exit 1 ;; esac
 for language in "$COMMUNICATIONLANGUAGE" "$DOCUMENTOUTPUTLANGUAGE"; do
@@ -83,7 +88,23 @@ for spec in 'node 20.12.0' 'git 2.25.0' 'uv 0.9.5' 'python3 3.11.0'; do
 	version_ok "$tool" "$minimum" || { echo "ERROR: $tool unavailable to $USER_NAME" >&2; exit 1; }
 done
 
-# Use the official v6 CLI, isolated from global npm installations.
+# Resolve latest once per image build, never during container startup.
+# Explicit versions use the same official npm package and compatibility gate.
+resolved_version=$(npm view "bmad-method@$VERSION" version --json | node -e '
+let data="";process.stdin.on("data",chunk=>data+=chunk);process.stdin.on("end",()=>{
+ const version=JSON.parse(data);
+ if(typeof version!=="string" || !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version)) process.exit(1);
+ console.log(version);
+});')
+case "$resolved_version" in
+	6.12.4) tea_version=v1.27.2 ;;
+	*) echo "ERROR: Unsupported BMAD version $resolved_version (requested: $VERSION). This Feature currently supports 6.12.4 with TEA 1.27.2; select version=6.12.4 or update the Feature when support is added." >&2; exit 1 ;;
+esac
+# Every supported installer ships with its tested npm dependency lock.
+locked_version=$(node -p 'require("./package.json").dependencies["bmad-method"]')
+[[ "$locked_version" == "$resolved_version" ]] || { echo 'ERROR: BMAD dependency lock does not match the selected version.' >&2; exit 1; }
+
+# Use the selected official CLI, isolated from global npm installations.
 mkdir -p "$ROOT/runtime"
 cp package.json package-lock.json "$ROOT/runtime/"
 npm ci --prefix "$ROOT/runtime" --ignore-scripts --no-audit --no-fund
@@ -96,25 +117,25 @@ export UV_PYTHON_DOWNLOADS=never
 exec python3 '$ROOT/setup.py' "\$@"
 EOF2
 chmod 755 /usr/local/bin/bmad-setup
-# bmad invokes the pinned CLI, even when another npm prefix is configured.
+# bmad invokes the image-selected CLI, even when another npm prefix is configured.
 cat > "$ROOT/bin/bmad" <<EOF2
 #!/usr/bin/env bash
 export PATH=$(printf '%q' "$feature_path")
 exec node '$ROOT/runtime/node_modules/bmad-method/tools/installer/bmad-cli.js' "\$@"
 EOF2
 chmod 755 "$ROOT/bin/bmad"
-python3 - "$ROOT/options.json" "$USER_NAME" "$USER_HOME" "$MODULES" "$TOOLS" "$COMMUNICATIONLANGUAGE" "$DOCUMENTOUTPUTLANGUAGE" <<'PY'
+python3 - "$ROOT/options.json" "$USER_NAME" "$USER_HOME" "$MODULES" "$TOOLS" "$COMMUNICATIONLANGUAGE" "$DOCUMENTOUTPUTLANGUAGE" "$resolved_version" "$tea_version" <<'PY'
 import json, sys
-path, user, home, modules, tools, communication, document = sys.argv[1:]
+path, user, home, modules, tools, communication, document, bmad, tea = sys.argv[1:]
 with open(path, 'w') as f:
     json.dump(dict(user=user, home=home, modules=modules, tools=tools,
                    communication=communication, document=document,
-                   bmad='6.12.4', tea='v1.27.2'), f)
+                   bmad=bmad, tea=tea), f)
 PY
 # Record the official generated skill names for collision checks before any
 # project files are touched. No user workspace is needed during the build.
 HOME="$work/home" UV_PYTHON_DOWNLOADS=never bmad install --directory "$work/template" \
-	--modules "$MODULES" --tools "$TOOLS" --pin tea=v1.27.2 --user-name BMad --yes
+	--modules "$MODULES" --tools "$TOOLS" --pin "tea=$tea_version" --user-name BMad --yes
 python3 - "$work/template" "$ROOT/skills.json" <<'PY'
 import json, pathlib, sys
 root = pathlib.Path(sys.argv[1])

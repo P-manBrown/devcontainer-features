@@ -1,7 +1,7 @@
 
 # BMAD Method (bmad)
 
-Install pinned BMAD Core/BMM and optional TEA with project-scoped skills.
+Install BMAD Core/BMM and optional compatible TEA with project-scoped skills.
 
 ## Example Usage
 
@@ -15,16 +15,25 @@ Install pinned BMAD Core/BMM and optional TEA with project-scoped skills.
 
 | Options Id | Description | Type | Default Value |
 |-----|-----|-----|-----|
+| version | BMAD version or latest (official npm stable tag). Unsupported versions fail the Feature compatibility check. | string | latest |
 | modules | Modules to install alongside Core (versions managed by this Feature). | string | bmm |
-| tools | BMAD skill integrations; does not install the AI tools themselves. | string | claude-code |
-| communicationLanguage | Initial conversation language. Existing project settings take precedence. | string | English |
-| documentOutputLanguage | Initial document language. Existing project settings take precedence. | string | English |
+| tools | BMAD skill integrations; does not install the AI tools themselves. | string | codex |
+| communicationLanguage | Initial conversation language. Existing project settings take precedence. | string | Japanese |
+| documentOutputLanguage | Initial document language. Existing project settings take precedence. | string | Japanese |
 
 ## Versions and dependencies
 
-This Feature pins Core/BMM **6.12.4** and TEA **1.27.2**. TEA 4.x and the v7 preview use different installation/configuration models and are not supported. The official v6 installer supplies Core automatically. npm dependencies are locked with `package-lock.json`; Feature releases manage the compatibility pair, rather than exposing independent version switches.
+`version` accepts an exact stable BMAD version or `latest` (default). `latest` resolves the official npm stable tag once at image build time; restarts do not check for newer releases. An uncached rebuild with `latest` can select a newer release, subject to the compatibility check. Specify `version: "6.12.4"` when sharing an exact, reproducible selection.
 
-`modules` accepts `bmm` (default) or `bmm,tea`. `tools` accepts `claude-code` (default), `codex`, or `claude-code,codex`. Each language option accepts `English` (default) or `Japanese`.
+The currently verified compatibility table is:
+
+| BMAD Core/BMM | TEA |
+| --- | --- |
+| 6.12.4 | 1.27.2 |
+
+The Feature selects the matching TEA version automatically. Unsupported BMAD versions fail with an explicit error, including when a future `latest` resolves outside this table. The Feature never silently falls back to an older version. TEA 4.x and v7 use different installation/configuration models and need explicit support before they can be selected. Supported installers ship with a tested npm dependency lock; module compatibility remains managed by the Feature.
+
+`modules` accepts `bmm` (default) or `bmm,tea`. `tools` accepts `claude-code`, `codex` (default), or `claude-code,codex`. Each language option accepts `English` or `Japanese` (default).
 
 The AI CLIs themselves are separate: add this repository's `claude-code` and/or `codex` Feature as needed. `tools` selects BMAD integration only. Both integrations share one project `_bmad` configuration. The official installer creates project skills in `.claude/skills` (Claude Code) and `.agents/skills` (Codex).
 
@@ -43,12 +52,10 @@ The base must be a glibc Debian/Ubuntu Linux image, x86_64 or aarch64, with Bash
 
 ## Workspace setup and Zed
 
-Tools are installed at image build time, without accessing a user repository. Project setup runs after mounts exist, as the configured remote user. For entrypoint setup, add this to the consuming `devcontainer.json`:
+Tools are installed at image build time, without accessing a user repository. Project setup normally runs through the Feature’s `postStartCommand`, from the workspace and as the configured remote user. No workspace environment variable is required when the editor runs Feature lifecycle hooks:
+
 
 ```jsonc
-"containerEnv": {
-  "BMAD_WORKSPACE": "${containerWorkspaceFolder}"
-},
 "features": {
   "ghcr.io/P-manBrown/devcontainer-features/bmad:1": {
     "modules": "bmm,tea",
@@ -59,7 +66,15 @@ Tools are installed at image build time, without accessing a user repository. Pr
 }
 ```
 
-Use an absolute mounted project path for `BMAD_WORKSPACE`. The entrypoint deliberately skips setup if it is unset, rather than guessing among `/workspaces` directories. A `postStartCommand` also runs setup from the workspace for implementations supporting Feature lifecycle hooks. Concurrent invocations are serialized per workspace/user. The image provides `bmad-setup [absolute-project-path]` for explicit invocation; it does not place helper scripts or documentation in the project.
+For editors relying on the entrypoint instead of lifecycle hooks, add this to the consuming `devcontainer.json`:
+
+```jsonc
+"containerEnv": {
+  "BMAD_WORKSPACE": "${containerWorkspaceFolder}"
+}
+```
+
+This fallback needs an explicit absolute mounted project path because an entrypoint has no guaranteed workspace working directory. Feature `containerEnv` is applied at image build time, so placing `${containerWorkspaceFolder}` there does not provide a portable runtime workspace value. Use an absolute mounted project path for `BMAD_WORKSPACE`. The entrypoint deliberately skips setup if it is unset, rather than guessing among `/workspaces` directories. A `postStartCommand` also runs setup from the workspace for implementations supporting Feature lifecycle hooks. Concurrent invocations are serialized per workspace/user. The image provides `bmad-setup [absolute-project-path]` for explicit invocation; it does not place helper scripts or documentation in the project.
 
 Zed's current source implements both lifecycle scripts and Feature entrypoints, but older versions have reported lifecycle/ordering problems. Its Feature entrypoints run only with `overrideCommand: true`; set that explicitly where necessary. Compose/`overrideCommand: false` configurations need working lifecycle support or an explicit `bmad-setup` invocation. Neither Zed GUI behavior nor Docker lifecycle execution is guaranteed by source inspection; test the configuration on your editor/version. This Feature does not depend on `postCreateCommand`.
 
