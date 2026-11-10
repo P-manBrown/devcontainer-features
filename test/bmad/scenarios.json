@@ -15,7 +15,7 @@
         "tools": "claude-code,codex",
         "communicationLanguage": "Japanese",
         "documentOutputLanguage": "Japanese",
-        "version": "6.12.4"
+        "version": "6.12.3"
       }
     }
   }

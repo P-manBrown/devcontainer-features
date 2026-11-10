@@ -89,25 +89,18 @@ for spec in 'node 20.12.0' 'git 2.25.0' 'uv 0.9.5' 'python3 3.11.0'; do
 done
 
 # Resolve latest once per image build, never during container startup.
-# Explicit versions use the same official npm package and compatibility gate.
+# Explicit versions resolve the same official npm package.
 resolved_version=$(npm view "bmad-method@$VERSION" version --json | node -e '
 let data="";process.stdin.on("data",chunk=>data+=chunk);process.stdin.on("end",()=>{
  const version=JSON.parse(data);
  if(typeof version!=="string" || !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version)) process.exit(1);
  console.log(version);
 });')
-case "$resolved_version" in
-	6.12.4) tea_version=v1.27.2 ;;
-	*) echo "ERROR: Unsupported BMAD version $resolved_version (requested: $VERSION). This Feature currently supports 6.12.4 with TEA 1.27.2; select version=6.12.4 or update the Feature when support is added." >&2; exit 1 ;;
-esac
-# Every supported installer ships with its tested npm dependency lock.
-locked_version=$(node -p 'require("./package.json").dependencies["bmad-method"]')
-[[ "$locked_version" == "$resolved_version" ]] || { echo 'ERROR: BMAD dependency lock does not match the selected version.' >&2; exit 1; }
-
-# Use the selected official CLI, isolated from global npm installations.
+# Install the selected release, not a repository lock for one historical
+# version. npm records the resolved dependency tree in the image itself.
 mkdir -p "$ROOT/runtime"
-cp package.json package-lock.json "$ROOT/runtime/"
-npm ci --prefix "$ROOT/runtime" --ignore-scripts --no-audit --no-fund
+npm install --prefix "$ROOT/runtime" --save-exact "bmad-method@$resolved_version" \
+	--engine-strict --ignore-scripts --no-audit --no-fund
 cp setup.py init.sh "$ROOT/"
 chmod 755 "$ROOT/init.sh"
 cat > /usr/local/bin/bmad-setup <<EOF2
@@ -121,28 +114,55 @@ chmod 755 /usr/local/bin/bmad-setup
 cat > "$ROOT/bin/bmad" <<EOF2
 #!/usr/bin/env bash
 export PATH=$(printf '%q' "$feature_path")
-exec node '$ROOT/runtime/node_modules/bmad-method/tools/installer/bmad-cli.js' "\$@"
+exec '$ROOT/runtime/node_modules/.bin/bmad' "\$@"
 EOF2
 chmod 755 "$ROOT/bin/bmad"
-python3 - "$ROOT/options.json" "$USER_NAME" "$USER_HOME" "$MODULES" "$TOOLS" "$COMMUNICATIONLANGUAGE" "$DOCUMENTOUTPUTLANGUAGE" "$resolved_version" "$tea_version" <<'PY'
-import json, sys
-path, user, home, modules, tools, communication, document, bmad, tea = sys.argv[1:]
-with open(path, 'w') as f:
-    json.dump(dict(user=user, home=home, modules=modules, tools=tools,
-                   communication=communication, document=document,
-                   bmad=bmad, tea=tea), f)
-PY
+# Check the interface we actually use, rather than requiring a listed version.
+install_help=$(bmad install --help)
+for flag in --directory --modules --tools --action --set --pin --no-shims --yes \
+	--user-name --communication-language --document-output-language; do
+	if ! grep -qF -- "$flag" <<< "$install_help"; then
+		echo "ERROR: BMAD $resolved_version installer lacks required option $flag." >&2
+		exit 1
+	fi
+done
 # Record the official generated skill names for collision checks before any
 # project files are touched. No user workspace is needed during the build.
 HOME="$work/home" UV_PYTHON_DOWNLOADS=never bmad install --directory "$work/template" \
-	--modules "$MODULES" --tools "$TOOLS" --pin "tea=$tea_version" --user-name BMad --yes
-python3 - "$work/template" "$ROOT/skills.json" <<'PY'
-import json, pathlib, sys
-root = pathlib.Path(sys.argv[1])
-with open(sys.argv[2], 'w') as f:
-    json.dump([str(p.relative_to(root)) for folder in ('.claude/skills', '.agents/skills')
-               for p in (root / folder).glob('*/SKILL.md')], f)
-PY
+	--modules "$MODULES" --tools "$TOOLS" --user-name BMad --yes --no-shims
+# Let the release's bundled official registry select module versions, then
+# freeze the versions actually installed for this image's runtime setup.
+node - "$ROOT" "$work/template" "$USER_NAME" "$USER_HOME" "$MODULES" "$TOOLS" "$COMMUNICATIONLANGUAGE" "$DOCUMENTOUTPUTLANGUAGE" "$resolved_version" <<'JS'
+const fs = require('node:fs');
+const path = require('node:path');
+const [root, project, user, home, modules, tools, communication, document, bmad] = process.argv.slice(2);
+const yaml = require(path.join(root, 'runtime/node_modules/yaml'));
+const manifest = yaml.parse(fs.readFileSync(path.join(project, '_bmad/_config/manifest.yaml'), 'utf8'));
+for (const file of ['config.toml', 'scripts/resolve_config.py']) {
+ if (!fs.existsSync(path.join(project, '_bmad', file))) {
+  throw new Error(`BMAD ${bmad} installer did not generate required project file ${file}`);
+ }
+}
+for (const name of ['core', ...modules.split(',')]) {
+ const installed = manifest.modules?.find(module => module.name === name);
+ if (!installed || !/^v?[0-9]+\.[0-9]+\.[0-9]+$/.test(installed.version) ||
+     (name !== 'tea' && installed.version.replace(/^v/, '') !== bmad)) {
+  throw new Error(`Official installer did not report the expected stable ${name} version`);
+ }
+}
+const tea = manifest.modules.find(module => module.name === 'tea')?.version || null;
+fs.writeFileSync(path.join(root, 'options.json'), JSON.stringify({user, home, modules, tools, communication, document, bmad, tea}));
+const skills = [];
+for (const folder of ['.claude/skills', '.agents/skills']) {
+ const target = path.join(project, folder);
+ if (!fs.existsSync(target)) continue;
+ for (const name of fs.readdirSync(target)) {
+  if (fs.existsSync(path.join(target, name, 'SKILL.md'))) skills.push(`${folder}/${name}/SKILL.md`);
+ }
+}
+if (skills.length === 0) throw new Error('Official installer did not generate any skills');
+fs.writeFileSync(path.join(root, 'skills.json'), JSON.stringify(skills));
+JS
 # The source cache is disposable program data; it stays in the image, never
 # in a persistent volume. Runtime installer caches are temporary copies.
 if [[ -d "$work/home/.bmad" ]]; then cp -a "$work/home/.bmad" "$ROOT/installer-cache"; fi

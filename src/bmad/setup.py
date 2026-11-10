@@ -130,8 +130,10 @@ def setup(project):
                                'resolve this name collision before setup.')
     fresh = not (bmad / 'config.toml').exists()
     args = ['bmad', 'install', '--directory', str(project), '--modules', OPTIONS['modules'],
-            '--tools', OPTIONS['tools'], '--pin', f"tea={OPTIONS['tea']}",
+            '--tools', OPTIONS['tools'],
             '--action', 'update' if bmad.exists() else 'install', '--yes', '--no-shims']
+    if 'tea' in OPTIONS['modules'].split(','):
+        args += ['--pin', f"tea={OPTIONS['tea']}"]
     if fresh:
         args += ['--user-name', 'BMad', '--communication-language', OPTIONS['communication'],
                  '--document-output-language', OPTIONS['document']]

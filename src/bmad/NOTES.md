@@ -1,14 +1,12 @@
 ## Versions and dependencies
 
-`version` accepts an exact stable BMAD version or `latest` (default). `latest` resolves the official npm stable tag once at image build time; restarts do not check for newer releases. An uncached rebuild with `latest` can select a newer release, subject to the compatibility check. Specify `version: "6.12.4"` when sharing an exact, reproducible selection.
+`version` accepts an exact stable BMAD version or `latest` (default). `latest` resolves the official npm stable tag once at image build time. There is no Feature-specific allowlist of BMAD versions. An uncached rebuild can obtain a newer stable release without a Feature update; restarts and project setup reuse the release already installed in the image.
 
-The versions verified and accepted by **this Feature** are:
+The selected release's official installer and bundled module registry select TEA, including any compatibility pin published by BMAD. For example, the 6.12.3 and 6.12.4 registries select TEA 1.27.2. During the image build, the Feature performs a template installation and records the actual stable Core/BMM and TEA versions. Runtime project setup uses those exact versions and explicitly pins the recorded TEA release, so TEA cannot independently float to a newer release at container startup.
 
-| BMAD Core/BMM | TEA |
-| --- | --- |
-| 6.12.4 | 1.27.2 |
+Specify `version: "6.12.4"` to reproduce that BMAD release and its official module selection. npm records the dependency tree in the image's runtime lockfile; transitive npm dependency resolution can differ between fresh image builds. No repository lockfile forces another BMAD version over the requested one.
 
-The Feature currently accepts **only BMAD 6.12.4**, selecting TEA 1.27.2 automatically when requested. Here, an "unsupported" version means one not verified and registered in this Feature; it does not mean that BMAD itself is unsupported upstream or known to be incompatible. Other versions fail with an explicit error, including when a future `latest` resolves outside this table. Accepting a new version requires updating and checking this Feature’s installer integration, TEA pairing, and npm dependency lock. The Feature never silently falls back to an older version. TEA 4.x and v7 use different installation/configuration models and need separate integration work.
+This integration uses the official `bmad install` interface, project Skills, and `_bmad` configuration format. A release with an incompatible installer API, output format, or dependency engine requirement can still fail with an actual installation error. In particular, v7 preview uses a different installation model and is not selected as a preview by `latest`; a future stable migration may require adapting this integration. New versions are not rejected simply because they are absent from a Feature-maintained table.
 
 `modules` accepts `bmm` (default) or `bmm,tea`. `tools` accepts `claude-code`, `codex` (default), or `claude-code,codex`. Each language option accepts `English` or `Japanese` (default).
 
@@ -85,7 +83,7 @@ document_output_language = "English"
 
 No personal name is a shared Feature option. The initial neutral name is `BMad`; set `core.user_name` in your personal override if desired.
 
-Normal restarts, recreations, and rebuilds skip installation when the recorded version/module/tool selection and generated skills are present. Language/customization edits remain untouched. A changed module/tool selection or compatibility pair uses the official update flow, preserving `_bmad/custom` and prior language/name answers. Keep customizations in the official custom layer; installer-managed files can change during updates. The Feature records skill ownership/hashes in `_bmad/.devcontainer-feature.json`. Updates refuse to overwrite modified generated skills or unrelated skills with the same name. For an existing BMAD installation created outside this Feature, resolve reported generated-skill collisions explicitly before adopting it; nothing is silently replaced. Deselection removes only unmodified, previously Feature-owned skills.
+Normal restarts, recreations, and rebuilds skip installation when the recorded version/module/tool selection and generated skills are present. Language/customization edits remain untouched. A changed module/tool selection or resolved version uses the official update flow, preserving `_bmad/custom` and prior language/name answers. Keep customizations in the official custom layer; installer-managed files can change during updates. The Feature records skill ownership/hashes in `_bmad/.devcontainer-feature.json`. Updates refuse to overwrite modified generated skills or unrelated skills with the same name. For an existing BMAD installation created outside this Feature, resolve reported generated-skill collisions explicitly before adopting it; nothing is silently replaced. Deselection removes only unmodified, previously Feature-owned skills.
 
 The v6.12.4 installer writes `--set ...=false` as a string in central TOML and module YAML. On initial TEA installation this Feature converts only its two supplied boolean defaults to actual booleans and checks the official configuration resolver. User customization files are not rewritten.
 
@@ -106,7 +104,7 @@ For Docker-free verification after installing the Feature, run `python3 test/bma
 ## Official references
 
 - [BMAD install documentation (contains v7 preview instructions)](https://docs.bmad-method.org/start/install-bmad/)
-- [Pinned v6.12.4 installer source](https://github.com/bmad-code-org/BMAD-METHOD/tree/v6.12.4/tools/installer)
+- [Example installer source (v6.12.4)](https://github.com/bmad-code-org/BMAD-METHOD/tree/v6.12.4/tools/installer)
 - [TEA v1.27.2](https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise/tree/v1.27.2)
 - [Dev Container Feature specification](https://github.com/devcontainers/spec/blob/main/docs/specs/devcontainer-features.md)
 - [Zed container/lifecycle implementation](https://github.com/zed-industries/zed/blob/main/crates/dev_container/src/devcontainer_manifest.rs)

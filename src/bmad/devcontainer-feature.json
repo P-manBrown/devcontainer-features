@@ -13,7 +13,7 @@
         "6.12.4"
       ],
       "default": "latest",
-      "description": "BMAD version or latest (official npm stable tag). Unsupported versions fail the Feature compatibility check."
+      "description": "Exact stable BMAD version, or latest to resolve the official npm stable tag at image build time."
     },
     "modules": {
       "type": "string",
@@ -22,7 +22,7 @@
         "bmm",
         "bmm,tea"
       ],
-      "description": "Modules to install alongside Core (versions managed by this Feature)."
+      "description": "Modules to install alongside Core. The selected BMAD release controls official module selection; resolved versions are recorded in the image."
     },
     "tools": {
       "type": "string",

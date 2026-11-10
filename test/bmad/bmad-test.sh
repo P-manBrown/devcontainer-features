@@ -6,7 +6,7 @@ check 'node' node --version
 check 'python' python3 --version
 check 'uv' uv --version
 check 'git' git --version
-check 'pinned_bmad' bash -c 'bmad --version | grep -F 6.12.4'
+check 'selected_bmad' python3 -c 'import json, subprocess; expected=json.load(open("/usr/local/share/bmad-feature/options.json"))["bmad"]; assert subprocess.check_output(["bmad", "--version"], text=True).strip().lstrip("v") == expected'
 check 'state_path_safety' python3 "$(dirname "$0")/path-safety.py"
 check 'real_installer_matrix_and_persistence' python3 "$(dirname "$0")/verify.py"
 reportResults

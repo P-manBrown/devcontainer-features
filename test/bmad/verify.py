@@ -33,20 +33,29 @@ def resolved(project):
                          '--project-root', str(project)))
 
 
+def manifest(project):
+    return json.loads(run('node', '-e',
+        'const fs=require("fs"),yaml=require(process.argv[1]);'
+        'console.log(JSON.stringify(yaml.parse(fs.readFileSync(process.argv[2],"utf8"))))',
+        str(FEATURE / 'runtime/node_modules/yaml'), str(project / '_bmad/_config/manifest.yaml')))
+
+
 def verify():
     options = json.loads((FEATURE / 'options.json').read_text())
     inventories = {}
+    module_versions = {}
     with tempfile.TemporaryDirectory(prefix='bmad-verification-') as temp:
         base = Path(temp)
         for modules in ('bmm', 'bmm,tea'):
             # Generate a complete official inventory for this module set.
             template = base / f'template-{modules}'
             run('bmad', 'install', '--directory', str(template), '--modules', modules,
-                '--tools', 'claude-code,codex', '--pin', 'tea=v1.27.2', '--yes',
+                '--tools', 'claude-code,codex', '--yes', '--no-shims',
                 env=dict(os.environ, HOME=str(base / 'cache-home')))
             all_skills = [str(p.relative_to(template)) for folder in ('.claude', '.agents')
                           for p in (template / folder / 'skills').glob('*/SKILL.md')]
             inventories[modules] = all_skills
+            module_versions[modules] = {m['name']: m['version'] for m in manifest(template)['modules']}
             for tools in ('claude-code', 'codex', 'claude-code,codex'):
                 for communication, document in itertools.product(('English', 'Japanese'), repeat=2):
                     root = base / f'{modules}-{tools}-{communication}-{document}'
@@ -56,7 +65,8 @@ def verify():
                     fixture = root / 'feature'
                     fixture.mkdir()
                     shutil.copy(SOURCE if SOURCE.exists() else FEATURE / 'setup.py', fixture / 'setup.py')
-                    options.update(modules=modules, tools=tools, communication=communication, document=document)
+                    options.update(modules=modules, tools=tools, communication=communication, document=document,
+                                   tea=module_versions[modules].get('tea'))
                     (fixture / 'options.json').write_text(json.dumps(options))
                     inventory = [p for p in all_skills if
                                  (p.startswith('.claude/') and 'claude-code' in tools) or
@@ -77,10 +87,10 @@ def verify():
                     assert sentinel.read_text() == 'keep my skill\n'
                     assert (project / '.claude/skills/bmad-help/SKILL.md').exists() == ('claude-code' in tools)
                     assert (project / '.agents/skills/bmad-help/SKILL.md').exists() == ('codex' in tools)
-                    manifest = (project / '_bmad/_config/manifest.yaml').read_text()
-                    assert 'version: 6.12.4' in manifest
+                    installed = {m['name']: m['version'] for m in manifest(project)['modules']}
+                    assert installed['core'] == installed['bmm'] == options['bmad']
                     if modules == 'bmm,tea':
-                        assert 'version: v1.27.2' in manifest
+                        assert installed['tea'] == options['tea']
                         assert values['modules']['tea']['tea_use_playwright_utils'] is False
                         assert values['modules']['tea']['tea_use_pactjs_utils'] is False
                         yaml_values = json.loads(run('node', '-e',
@@ -112,18 +122,18 @@ def verify():
                         # Do not trust only our marker after an external update.
                         manifest_path = project / '_bmad/_config/manifest.yaml'
                         manifest_path.write_text(manifest_path.read_text().replace(
-                            'version: 6.12.4', 'version: 0.0.0'))
+                            f"version: {options['bmad']}", 'version: 0.0.0'))
                     else:
                         state['configuration']['bmad'] = 'old'
                         state_path.write_text(json.dumps(state))
                     run('python3', str(copied / 'setup.py'), str(project))
-                    assert 'version: 6.12.4' in (project / '_bmad/_config/manifest.yaml').read_text()
+                    assert manifest(project)['installation']['version'] == options['bmad']
                     assert custom.read_text().endswith('user_name = "Local User"\n')
                     assert resolved(project)['core']['user_name'] == 'Local User'
                     print(f'PASS {modules} / {tools} / {communication} / {document}', flush=True)
         # Change the actual selection on an existing project.
         for modules, tools in (('bmm', 'claude-code'), ('bmm,tea', 'claude-code,codex')):
-            options.update(modules=modules, tools=tools)
+            options.update(modules=modules, tools=tools, tea=module_versions[modules].get('tea'))
             (fixture / 'options.json').write_text(json.dumps(options))
             inventory = [p for p in inventories[modules] if
                          p.startswith('.claude/') or 'codex' in tools]
