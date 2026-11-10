@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+[[ $(id -u) == 0 ]] || { echo 'ERROR: Run as root.' >&2; exit 1; }
+USER_NAME="${_REMOTE_USER}"
+USER_HOME="${_REMOTE_USER_HOME}"
+ROOT=/usr/local/share/bmad-feature
+MODULES="${MODULES:-bmm}"
+TOOLS="${TOOLS:-claude-code}"
+COMMUNICATIONLANGUAGE="${COMMUNICATIONLANGUAGE:-English}"
+DOCUMENTOUTPUTLANGUAGE="${DOCUMENTOUTPUTLANGUAGE:-English}"
+case "$MODULES" in bmm|bmm,tea) ;; *) echo 'Invalid modules' >&2; exit 1 ;; esac
+case "$TOOLS" in claude-code|codex|claude-code,codex) ;; *) echo 'Invalid tools' >&2; exit 1 ;; esac
+for language in "$COMMUNICATIONLANGUAGE" "$DOCUMENTOUTPUTLANGUAGE"; do
+	case "$language" in English|Japanese) ;; *) echo 'Invalid language' >&2; exit 1 ;; esac
+done
+mkdir -p "$ROOT/bin"
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+# Like claude-mem/bruno-cli, own our dependencies rather than relying on
+# Feature ordering. Keep fallbacks private so system tools are never replaced.
+apt_ready=false
+apt_install() {
+	if [[ "$apt_ready" == false ]]; then apt-get update; apt_ready=true; fi
+	DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
+}
+command -v curl >/dev/null && command -v xz >/dev/null || apt_install curl ca-certificates xz-utils
+
+# A dependency is reusable only if the remote user can execute it with the
+# same PATH used by this Feature, and it meets the version floor.
+feature_path="$ROOT/bin:$PATH"
+user_run() {
+	if [[ "$USER_NAME" == root ]]; then
+		HOME="$USER_HOME" PATH="$feature_path" "$@"
+	else
+		su -s /bin/sh "$USER_NAME" -c "$(printf 'env HOME=%q PATH=%q ' "$USER_HOME" "$feature_path")$(printf '%q ' "$@")"
+	fi
+}
+version_ok() {
+	local output version
+	output=$(user_run "$1" --version 2>/dev/null) || return 1
+	version=$(printf '%s' "$output" | sed -nE 's/^[^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' | head -1)
+	[[ -n "$version" && "$(printf '%s\n%s\n' "$2" "$version" | sort -V | head -1)" == "$2" ]]
+}
+case "$(uname -m)" in
+	x86_64) node_arch=x64; uv_arch=x86_64 ;;
+	aarch64|arm64) node_arch=arm64; uv_arch=aarch64 ;;
+	*) echo 'ERROR: Only Linux x86_64 and aarch64 are supported.' >&2; exit 1 ;;
+esac
+if ! version_ok node 20.12.0 || ! user_run node -e 'const m=Number(process.versions.node.split(".")[0]); process.exit(m === 20 || m >= 22 ? 0 : 1)' \
+	|| ! user_run npm --version >/dev/null 2>&1; then
+	asset="node-v22.16.0-linux-${node_arch}.tar.xz"
+	curl -fsSL "https://nodejs.org/dist/v22.16.0/$asset" -o "$work/$asset"
+	curl -fsSL https://nodejs.org/dist/v22.16.0/SHASUMS256.txt -o "$work/sums"
+	(cd "$work" && grep " $asset\$" sums | sha256sum -c -)
+	mkdir -p "$ROOT/node"
+	tar -xJf "$work/$asset" -C "$ROOT/node" --strip-components=1 --no-same-owner
+	for tool in node npm npx; do ln -sfn "$ROOT/node/bin/$tool" "$ROOT/bin/$tool"; done
+fi
+if ! version_ok git 2.25.0; then
+	apt_install git
+	version_ok git 2.25.0 || { echo 'ERROR: Git >=2.25 must be available to the remote user.' >&2; exit 1; }
+fi
+if ! version_ok uv 0.9.5; then
+	asset="uv-${uv_arch}-unknown-linux-gnu.tar.gz"
+	curl -fsSL "https://github.com/astral-sh/uv/releases/download/0.9.5/$asset" -o "$work/$asset"
+	curl -fsSL "https://github.com/astral-sh/uv/releases/download/0.9.5/$asset.sha256" -o "$work/uv.sha256"
+	printf '%s  %s\n' "$(awk '{print $1}' "$work/uv.sha256")" "$asset" > "$work/checksums"
+	(cd "$work" && sha256sum -c checksums)
+	tar -xzf "$work/$asset" -C "$work" --no-same-owner
+	install -m 755 "$work/uv-${uv_arch}-unknown-linux-gnu/uv" "$ROOT/bin/uv"
+fi
+export PATH="$feature_path"
+if ! version_ok python3 3.11.0; then
+	UV_PYTHON_DOWNLOADS=automatic UV_PYTHON_INSTALL_DIR="$ROOT/python" uv python install 3.11.14 --no-bin
+	python_path=$(UV_PYTHON_INSTALL_DIR="$ROOT/python" uv python find --managed-python 3.11.14)
+	ln -sfn "$python_path" "$ROOT/bin/python3"
+	ln -sfn "$python_path" "$ROOT/bin/python3.11"
+fi
+for spec in 'node 20.12.0' 'git 2.25.0' 'uv 0.9.5' 'python3 3.11.0'; do
+	read -r tool minimum <<< "$spec"
+	version_ok "$tool" "$minimum" || { echo "ERROR: $tool unavailable to $USER_NAME" >&2; exit 1; }
+done
+
+# Use the official v6 CLI, isolated from global npm installations.
+mkdir -p "$ROOT/runtime"
+cp package.json package-lock.json "$ROOT/runtime/"
+npm ci --prefix "$ROOT/runtime" --ignore-scripts --no-audit --no-fund
+cp setup.py init.sh "$ROOT/"
+chmod 755 "$ROOT/init.sh"
+cat > /usr/local/bin/bmad-setup <<EOF2
+#!/usr/bin/env bash
+export PATH=$(printf '%q' "$feature_path")
+export UV_PYTHON_DOWNLOADS=never
+exec python3 '$ROOT/setup.py' "\$@"
+EOF2
+chmod 755 /usr/local/bin/bmad-setup
+# bmad invokes the pinned CLI, even when another npm prefix is configured.
+cat > "$ROOT/bin/bmad" <<EOF2
+#!/usr/bin/env bash
+export PATH=$(printf '%q' "$feature_path")
+exec node '$ROOT/runtime/node_modules/bmad-method/tools/installer/bmad-cli.js' "\$@"
+EOF2
+chmod 755 "$ROOT/bin/bmad"
+python3 - "$ROOT/options.json" "$USER_NAME" "$USER_HOME" "$MODULES" "$TOOLS" "$COMMUNICATIONLANGUAGE" "$DOCUMENTOUTPUTLANGUAGE" <<'PY'
+import json, sys
+path, user, home, modules, tools, communication, document = sys.argv[1:]
+with open(path, 'w') as f:
+    json.dump(dict(user=user, home=home, modules=modules, tools=tools,
+                   communication=communication, document=document,
+                   bmad='6.12.4', tea='v1.27.2'), f)
+PY
+# Record the official generated skill names for collision checks before any
+# project files are touched. No user workspace is needed during the build.
+HOME="$work/home" UV_PYTHON_DOWNLOADS=never bmad install --directory "$work/template" \
+	--modules "$MODULES" --tools "$TOOLS" --pin tea=v1.27.2 --user-name BMad --yes
+python3 - "$work/template" "$ROOT/skills.json" <<'PY'
+import json, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+with open(sys.argv[2], 'w') as f:
+    json.dump([str(p.relative_to(root)) for folder in ('.claude/skills', '.agents/skills')
+               for p in (root / folder).glob('*/SKILL.md')], f)
+PY
+# The source cache is disposable program data; it stays in the image, never
+# in a persistent volume. Runtime installer caches are temporary copies.
+if [[ -d "$work/home/.bmad" ]]; then cp -a "$work/home/.bmad" "$ROOT/installer-cache"; fi
+printf 'BMAD dependencies verified for %s.\n' "$USER_NAME"

@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "dependencies": {
+    "bmad-method": "6.12.4"
+  },
+  "name": "bmad-feature-runtime"
+}

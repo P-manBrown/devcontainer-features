@@ -1,0 +1,41 @@
+{
+  "id": "bmad",
+  "version": "1.0.0",
+  "name": "BMAD Method",
+  "description": "Install pinned BMAD Core/BMM and optional TEA with project-scoped skills.",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/bmad",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "options": {
+    "modules": {
+      "type": "string",
+      "default": "bmm",
+      "enum": ["bmm", "bmm,tea"],
+      "description": "Modules to install alongside Core (versions managed by this Feature)."
+    },
+    "tools": {
+      "type": "string",
+      "default": "claude-code",
+      "enum": ["claude-code", "codex", "claude-code,codex"],
+      "description": "BMAD skill integrations; does not install the AI tools themselves."
+    },
+    "communicationLanguage": {
+      "type": "string",
+      "default": "English",
+      "enum": ["English", "Japanese"],
+      "description": "Initial conversation language. Existing project settings take precedence."
+    },
+    "documentOutputLanguage": {
+      "type": "string",
+      "default": "English",
+      "enum": ["English", "Japanese"],
+      "description": "Initial document language. Existing project settings take precedence."
+    }
+  },
+  "containerEnv": {
+    "PATH": "/usr/local/share/bmad-feature/bin:${PATH}",
+    "UV_PYTHON_DOWNLOADS": "never"
+  },
+  "entrypoint": "/usr/local/share/bmad-feature/init.sh",
+  "postStartCommand": "/usr/local/bin/bmad-setup",
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils", "ghcr.io/devcontainers/features/git"]
+}
