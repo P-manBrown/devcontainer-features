@@ -109,6 +109,7 @@ Update `forwardPorts` (or `compose.yml` `ports`) to match whichever port you end
 
 Headless Linux environments may not provide an OS keychain such as libsecret. In that case, Claude Mem's `readClaudeOAuthToken()` falls back to the `CLAUDE_CODE_OAUTH_TOKEN` environment variable. Whether the normal Claude Code login flow provides credentials correctly in a particular Dev Container environment should be verified there.
 
+
 ---
 
 _Note: This file was auto-generated from the [devcontainer-feature.json](https://github.com/P-manBrown/devcontainer-features/blob/main/src/claude-mem/devcontainer-feature.json).  Add additional notes to a `NOTES.md`._
