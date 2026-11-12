@@ -18,6 +18,36 @@ if [[ "$(id -u)" -ne 0 ]]; then
 	exit 1
 fi
 
+# Feature options are strings; accept a validated comma-separated IDE list.
+validate_ides() {
+	local selected
+	local -a requested
+	[[ -n "${IDE}" && "${IDE}" != *, && "${IDE}" != *$'\n'* && "${IDE}" != *$'\r'* ]] || { err "ERROR: Empty IDE entry."; return 1; }
+	IFS=',' read -r -a requested <<< "${IDE}"
+	for selected in "${requested[@]}"; do
+		selected="${selected#"${selected%%[![:space:]]*}"}"
+		selected="${selected%"${selected##*[![:space:]]}"}"
+		case "${selected}" in
+			claude-code|codex-cli) ;;
+			*) err "ERROR: Unsupported IDE: ${selected}"; return 1 ;;
+		esac
+	done
+}
+validate_ides
+case "${PROVIDER}" in
+	claude|codex|host|by-source) ;;
+	*) err "ERROR: Unsupported provider: ${PROVIDER}"; exit 1 ;;
+esac
+
+# A system-wide, unmanaged installation is independent of root's home and
+# persists in the image when user configuration volumes are reused.
+uv_installer="$(mktemp)"
+curl -fsSL https://astral.sh/uv/install.sh -o "${uv_installer}"
+UV_UNMANAGED_INSTALL=/usr/local/bin sh "${uv_installer}"
+rm -f "${uv_installer}"
+/usr/local/bin/uv --version
+/usr/local/bin/uvx --version
+
 ## Node.js / npm — fall back to installing Node.js LTS ourselves if missing,
 ## mirroring src/bruno-cli/install.sh (some editors ignore installsAfter/dependsOn
 ## ordering, so this feature can't rely on a Node.js feature having already run).
@@ -77,6 +107,16 @@ else
 fi
 
 echo "Installed: $(claude-mem --version)"
+if [[ "${PROVIDER}" == "by-source" || "${PROVIDER}" == "codex" ]]; then
+	worker_script="$(npm root -g)/claude-mem/plugin/scripts/worker-service.cjs"
+	capability=CLAUDE_MEM_CODEX_MODEL
+	[[ "${PROVIDER}" != "by-source" ]] || capability=CLAUDE_MEM_PROVIDER_BY_SOURCE
+	if ! grep -q "${capability}" "${worker_script}"; then
+		err "ERROR: Installed claude-mem does not support ${PROVIDER}; use a newer version."
+		exit 1
+	fi
+fi
+
 
 # Pre-create the mount point owned by the target user. The entrypoint may
 # run as a non-root user (e.g. when the base image sets USER), so it can't
@@ -86,12 +126,12 @@ mkdir -p /usr/local/share/claude-mem-cache
 chown "${USER_NAME}" /usr/local/share/claude-mem-cache
 
 # Create entrypoint
-cat <<-EOF > /usr/local/share/claude-mem.env
-	USER_NAME="${USER_NAME}"
-	USER_HOME="${USER_HOME}"
-	IDE="${IDE}"
-	PROVIDER="${PROVIDER}"
-EOF
+{
+	printf 'USER_NAME=%q\n' "${USER_NAME}"
+	printf 'USER_HOME=%q\n' "${USER_HOME}"
+	printf 'IDE=%q\n' "${IDE}"
+	printf 'PROVIDER=%q\n' "${PROVIDER}"
+} > /usr/local/share/claude-mem.env
 cat <<-'EOF' > /usr/local/share/claude-mem-init.sh
 	#!/usr/bin/env bash
 	set -eu
@@ -130,24 +170,91 @@ cat <<-'EOF' > /usr/local/share/claude-mem-init.sh
 
 	mkdir -p "${CACHE_ROOT}"
 	migrate_cache_dir
-	chown -R "${USER_NAME}" "${CACHE_ROOT}"
+	if [[ "$(id -u)" -eq 0 ]]; then
+		chown -R "${USER_NAME}" "${CACHE_ROOT}"
+	fi
 	ln -sfn "${CACHE_ROOT}" "${HOME_CACHE_DIR}"
 
-	# `claude-mem install` does not verify OAuth/API credentials at install
-	# time (it only flips config, see plan §6 note); it CAN exit non-zero
-	# though (e.g. `--ide codex-cli` when the `codex` binary isn't on PATH
-	# yet — "partial installation"). Don't let that abort the entrypoint;
-	# just surface it.
-	install_claude_mem() {
-		CI=true claude-mem install --provider "${PROVIDER}" --ide "${IDE}"
+	# Use the same non-login user environment for prerequisites and installation.
+	# Workers spawned by the installer inherit this PATH, including system uvx.
+	run_as_user() {
+		local command
+		printf -v command '%q ' "$@"
+		if [[ "$(id -un)" == "${USER_NAME}" ]]; then
+			HOME="${USER_HOME}" PATH="/usr/local/bin:${PATH}" CI=true "$@"
+		elif [[ "$(id -u)" -eq 0 ]]; then
+			su -s /bin/bash -c "export HOME=$(printf '%q' "${USER_HOME}") PATH=$(printf '%q' "/usr/local/bin:${PATH}") CI=true; ${command}" "${USER_NAME}"
+		else
+			err "ERROR: Run initialization as root or ${USER_NAME}."
+			return 1
+		fi
 	}
-	if [[ "${USER_NAME}" == "root" ]]; then
-		HOME="${USER_HOME}" install_claude_mem || err "WARNING: claude-mem install exited non-zero; see output above."
-	else
-		su -s /bin/bash \
-			-c "HOME=$(printf '%q' "${USER_HOME}") CI=true claude-mem install --provider $(printf '%q' "${PROVIDER}") --ide $(printf '%q' "${IDE}")" \
-			"${USER_NAME}" || err "WARNING: claude-mem install exited non-zero; see output above."
+
+	ides=()
+	[[ -n "${IDE}" && "${IDE}" != *, && "${IDE}" != *$'\n'* && "${IDE}" != *$'\r'* ]] || { err "ERROR: Empty IDE entry."; exit 1; }
+	IFS=',' read -r -a requested_ides <<< "${IDE}"
+	needs_claude=false
+	needs_codex=false
+	for selected_ide in "${requested_ides[@]}"; do
+		selected_ide="${selected_ide#"${selected_ide%%[![:space:]]*}"}"
+		selected_ide="${selected_ide%"${selected_ide##*[![:space:]]}"}"
+		case "${selected_ide}" in
+			claude-code) needs_claude=true ;;
+			codex-cli) needs_codex=true ;;
+			*) err "ERROR: Unsupported IDE: ${selected_ide}"; exit 1 ;;
+		esac
+		# Register duplicate entries only once, preserving the requested order.
+		if [[ " ${ides[*]-} " != *" ${selected_ide} "* ]]; then
+			ides+=("${selected_ide}")
+		fi
+	done
+	install_provider="${PROVIDER}"
+	case "${PROVIDER}" in
+		claude) needs_claude=true ;;
+		codex) needs_codex=true ;;
+		host) ;;
+		by-source) needs_claude=true; needs_codex=true; install_provider=claude ;;
+		*) err "ERROR: Unsupported provider: ${PROVIDER}"; exit 1 ;;
+	esac
+	# Check all prerequisites before modifying either integration or settings.
+	run_as_user uv --version
+	run_as_user uvx --version
+	if "${needs_claude}"; then
+		run_as_user bash -c 'command -v claude >/dev/null || { echo "ERROR: Claude Code CLI is required by the selected IDE/provider." >&2; exit 1; }'
 	fi
+	if "${needs_codex}"; then
+		run_as_user bash -c 'command -v codex >/dev/null || { echo "ERROR: Codex CLI is required by the selected IDE/provider." >&2; exit 1; }'
+	fi
+
+	# Persist routing before the installer starts a Worker. Refuse malformed
+	# settings; update only the routing key and preserve all other settings.
+	# Explicit single-provider selection clears any previous source overrides.
+	run_as_user node - "${HOME_CACHE_DIR}/settings.json" "${PROVIDER}" <<'JS'
+	const fs = require('fs');
+	const [file, provider] = process.argv.slice(2);
+	let settings = {};
+	if (fs.existsSync(file)) settings = JSON.parse(fs.readFileSync(file, 'utf8'));
+	if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+	    throw new Error('claude-mem settings.json must contain an object');
+	}
+	settings.CLAUDE_MEM_PROVIDER_BY_SOURCE = provider === 'by-source'
+	    ? JSON.stringify({claude: 'claude', codex: 'codex'}) : '';
+	const temporary = `${file}.feature-${process.pid}.tmp`;
+	try {
+	    fs.writeFileSync(temporary, JSON.stringify(settings, null, 2) + '\n', {mode: 0o600});
+	    fs.renameSync(temporary, file);
+	} finally {
+	    if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+	}
+	JS
+	failed=0
+	for selected_ide in "${ides[@]}"; do
+		if ! run_as_user claude-mem install --provider "${install_provider}" --ide "${selected_ide}"; then
+			err "ERROR: claude-mem registration failed for ${selected_ide}; initialization is incomplete."
+			failed=1
+		fi
+	done
+	exit "${failed}"
 EOF
 chmod +x /usr/local/share/claude-mem-init.sh
 
