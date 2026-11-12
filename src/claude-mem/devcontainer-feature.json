@@ -1,6 +1,6 @@
 {
   "id": "claude-mem",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Claude Mem",
   "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/claude-mem",
   "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
@@ -14,15 +14,15 @@
     },
     "ide": {
       "type": "string",
-      "enum": ["claude-code", "codex-cli"],
+      "proposals": ["claude-code", "codex-cli", "claude-code,codex-cli"],
       "default": "claude-code",
-      "description": "Which IDE integration to register claude-mem hooks for."
+      "description": "Comma-separated IDE integrations to register: claude-code and/or codex-cli."
     },
     "provider": {
       "type": "string",
-      "enum": ["claude", "host"],
+      "enum": ["claude", "codex", "host", "by-source"],
       "default": "claude",
-      "description": "Which memory provider claude-mem uses to compress sessions. 'claude' reuses your logged-in Claude Code CLI's OAuth credentials (requires the claude-code feature/binary to be present, regardless of the 'ide' setting). 'host' expects an OpenAI-compatible server already listening on 127.0.0.1 (claude-mem does not start one itself) — Codex CLI does not expose such a server out of the box, so this option is only practical if you run your own bridge."
+      "description": "Memory LLM provider: claude requires Claude Code CLI/login; codex requires Codex CLI/login; host requires your own local compatible server. by-source routes Claude Code sessions to claude and Codex sessions to codex, with claude as the default (requires both CLIs/logins)."
     }
   },
   "mounts": [

@@ -3,6 +3,7 @@
     "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "remoteUser": "vscode",
     "features": {
+      "claude-code": {},
       "claude-mem": {}
     }
   },
@@ -12,6 +13,51 @@
     "features": {
       "claude-code": {},
       "claude-mem": {}
+    }
+  },
+  "with-codex": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "claude-code": {},
+      "codex": {},
+      "claude-mem": {
+        "ide": "codex-cli"
+      }
+    }
+  },
+  "with-both": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "claude-code": {},
+      "codex": {},
+      "claude-mem": {
+        "ide": "claude-code,codex-cli"
+      }
+    }
+  },
+  "with-codex-provider": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "codex": {},
+      "claude-mem": {
+        "ide": "codex-cli",
+        "provider": "codex"
+      }
+    }
+  },
+  "with-by-source": {
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
+    "features": {
+      "claude-code": {},
+      "codex": {},
+      "claude-mem": {
+        "ide": "claude-code,codex-cli",
+        "provider": "by-source"
+      }
     }
   }
 }
