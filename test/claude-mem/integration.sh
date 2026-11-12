@@ -26,11 +26,11 @@ verify_integrations() {
 verify_provider_settings() {
     local expected="${PROVIDER}"
     [[ "${expected}" != by-source ]] || expected=claude
-    jq -e --arg expected "${expected}" '.CLAUDE_MEM_PROVIDER == $expected' "${HOME}/.claude-mem/settings.json" >/dev/null || return 1
+    jq -e --arg expected "${expected}" '(.env // .).CLAUDE_MEM_PROVIDER == $expected' "${HOME}/.claude-mem/settings.json" >/dev/null || return 1
     if [[ "${PROVIDER}" == by-source ]]; then
-        jq -e '(.CLAUDE_MEM_PROVIDER_BY_SOURCE | fromjson) == {claude: "claude", codex: "codex"}' "${HOME}/.claude-mem/settings.json" >/dev/null
+        jq -e '((.env // .).CLAUDE_MEM_PROVIDER_BY_SOURCE | fromjson) == {claude: "claude", codex: "codex"}' "${HOME}/.claude-mem/settings.json" >/dev/null
     else
-        jq -e '.CLAUDE_MEM_PROVIDER_BY_SOURCE == ""' "${HOME}/.claude-mem/settings.json" >/dev/null
+        jq -e '(.env // .).CLAUDE_MEM_PROVIDER_BY_SOURCE == ""' "${HOME}/.claude-mem/settings.json" >/dev/null
     fi
 }
 # Plugin registration precedes provider configuration and Worker startup in the

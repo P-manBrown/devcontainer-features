@@ -227,7 +227,7 @@ cat <<-'EOF' > /usr/local/share/claude-mem-init.sh
 	fi
 
 	# Persist routing before the installer starts a Worker. Refuse malformed
-	# settings; update only the routing key and preserve all other settings.
+	# settings; update the provider/routing keys and preserve other settings.
 	# Explicit single-provider selection clears any previous source overrides.
 	run_as_user node - "${HOME_CACHE_DIR}/settings.json" "${PROVIDER}" <<'JS'
 	const fs = require('fs');
@@ -237,7 +237,12 @@ cat <<-'EOF' > /usr/local/share/claude-mem-init.sh
 	if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
 	    throw new Error('claude-mem settings.json must contain an object');
 	}
-	settings.CLAUDE_MEM_PROVIDER_BY_SOURCE = provider === 'by-source'
+	// Upstream supports both flat settings and legacy settings nested in env.
+	const nested = settings.env && typeof settings.env === 'object' &&
+	    !Array.isArray(settings.env) && Object.keys(settings.env).some(key => key.startsWith('CLAUDE_MEM_'));
+	const target = nested ? settings.env : settings;
+	target.CLAUDE_MEM_PROVIDER = provider === 'by-source' ? 'claude' : provider;
+	target.CLAUDE_MEM_PROVIDER_BY_SOURCE = provider === 'by-source'
 	    ? JSON.stringify({claude: 'claude', codex: 'codex'}) : '';
 	const temporary = `${file}.feature-${process.pid}.tmp`;
 	try {
@@ -247,13 +252,26 @@ cat <<-'EOF' > /usr/local/share/claude-mem-init.sh
 	    if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
 	}
 	JS
+	# An explicit --provider codex triggers browser pairing even in CI. The
+	# upstream non-interactive installer can retain a saved Codex provider
+	# without pairing; persist it above and use that supported path instead.
+	provider_args=(--provider "${install_provider}")
+	[[ "${PROVIDER}" != codex ]] || provider_args=()
 	failed=0
 	for selected_ide in "${ides[@]}"; do
-		if ! run_as_user claude-mem install --provider "${install_provider}" --ide "${selected_ide}"; then
+		if ! run_as_user claude-mem install "${provider_args[@]}" --no-auto-start --ide "${selected_ide}"; then
 			err "ERROR: claude-mem registration failed for ${selected_ide}; initialization is incomplete."
 			failed=1
 		fi
 	done
+	# Fresh non-interactive upstream installs intentionally skip autostart.
+	# Start once after every selected integration has completed successfully.
+	if [[ "${failed}" -eq 0 ]]; then
+		if ! run_as_user claude-mem start; then
+			err "ERROR: claude-mem Worker startup failed; initialization is incomplete."
+			failed=1
+		fi
+	fi
 	exit "${failed}"
 EOF
 chmod +x /usr/local/share/claude-mem-init.sh

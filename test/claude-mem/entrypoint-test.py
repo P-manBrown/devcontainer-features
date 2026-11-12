@@ -36,13 +36,22 @@ class EntrypointTest(unittest.TestCase):
             self.tool(name, 'exit 0')
         self.tool('claude-mem', '''echo "$*" >> "$CALLS"
 node -e 'require("child_process").execFileSync("uvx", ["--version"])' || exit 1
+if [[ "$1" == start ]]; then
+    [[ "${FAIL_START:-}" != true ]]
+    exit $?
+fi
+# Fail if the Feature uses the upstream browser-pairing path for Codex.
+[[ "$*" != *"--provider codex"* ]] || exit 99
 ide="${@: -1}"
 [[ "$ide" != "${FAIL_IDE:-}" ]] || exit 7
-node - "$3" <<'JS'
+node - "$@" <<'JS'
 const fs = require('fs');
 const file = process.env.HOME + '/.claude-mem/settings.json';
 const settings = JSON.parse(fs.readFileSync(file, 'utf8'));
-settings.CLAUDE_MEM_PROVIDER = process.argv[2];
+const target = settings.env || settings;
+const args = process.argv.slice(2);
+const providerIndex = args.indexOf('--provider');
+if (providerIndex >= 0) target.CLAUDE_MEM_PROVIDER = args[providerIndex + 1];
 fs.writeFileSync(file, JSON.stringify(settings));
 JS
 mkdir -p "$HOME/.config-test"
@@ -71,7 +80,7 @@ printf 'registered\\n' > "$HOME/.config-test/$ide"
                 self.log.unlink(missing_ok=True)
                 self.run_init(ide)
                 self.assertEqual(self.log.read_text().splitlines(),
-                                 [f'install --provider claude --ide {item}' for item in expected])
+                                 [f'install --provider claude --no-auto-start --ide {item}' for item in expected] + ['start'])
 
     def test_restart_and_recreated_home_with_existing_volumes(self):
         self.run_init('claude-code,codex-cli')
@@ -111,7 +120,7 @@ printf 'registered\\n' > "$HOME/.config-test/$ide"
         (self.bin / 'claude').unlink()
         self.run_init('codex-cli', provider='codex')
         self.assertEqual(self.settings()['CLAUDE_MEM_PROVIDER'], 'codex')
-        self.assertEqual(self.log.read_text().strip(), 'install --provider codex --ide codex-cli')
+        self.assertEqual(self.log.read_text().splitlines(), ['install --no-auto-start --ide codex-cli', 'start'])
 
     def test_codex_provider_requires_codex_even_for_claude_ide(self):
         (self.bin / 'codex').unlink()
@@ -159,6 +168,23 @@ printf 'registered\\n' > "$HOME/.config-test/$ide"
                 self.run_init(ide, success=False)
                 self.assertFalse(self.log.exists())
 
+    def test_worker_start_failure_is_not_success(self):
+        self.env['FAIL_START'] = 'true'
+        self.run_init(success=False)
+        self.assertEqual(self.log.read_text().splitlines()[-1], 'start')
+
+    def test_nested_settings_preserve_routing_and_other_fields(self):
+        self.cache.mkdir()
+        (self.cache / 'settings.json').write_text(json.dumps({
+            'env': {'CLAUDE_MEM_PROVIDER': 'claude', 'UNRELATED': 'keep'},
+            'metadata': {'keep': True}}))
+        self.run_init('codex-cli', provider='codex')
+        settings = self.settings()
+        self.assertEqual(settings['env']['CLAUDE_MEM_PROVIDER'], 'codex')
+        self.assertEqual(settings['env']['UNRELATED'], 'keep')
+        self.assertEqual(settings['metadata'], {'keep': True})
+        self.assertNotIn('CLAUDE_MEM_PROVIDER', settings)
+
     def test_installed_worker_capability_guard(self):
         bundle = self.root / 'claude-mem/plugin/scripts/worker-service.cjs'
         bundle.parent.mkdir(parents=True)
@@ -188,6 +214,7 @@ printf 'registered\\n' > "$HOME/.config-test/$ide"
             self.env['FAIL_IDE'] = ide
             self.run_init('claude-code,codex-cli', success=False)
             self.assertEqual(len(self.log.read_text().splitlines()), 2)
+            self.assertNotIn('start', self.log.read_text().splitlines())
 
 
 class InitializationWaitTest(unittest.TestCase):

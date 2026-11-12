@@ -21,7 +21,7 @@ Install claude-mem and configure it to capture Claude Code/Codex session memory.
 
 ## What this Feature installs
 
-This Feature installs the `claude-mem` npm CLI and uv (including uvx) using the official uv standalone installer. uv and uvx are installed system-wide in `/usr/local/bin`, outside user configuration volumes. The installer selects the Linux architecture and fails if no compatible binary is available; both executables are checked during build and again as the target user at startup. At container startup, its entrypoint runs `claude-mem install --provider <provider> --ide <ide>` non-interactively to register the selected hooks and plugin. `ide=claude-code,codex-cli` runs registration once for Claude Code and once for Codex. The default remains `ide=claude-code`. Registration uses the target user and an explicit PATH containing `/usr/local/bin`, inherited by Workers started during installation. No additional `npx` or postCreateCommand registration is needed. Session memory is stored in `~/.claude-mem`, which is linked to a named volume so it persists across container rebuilds.
+This Feature installs the `claude-mem` npm CLI and uv (including uvx) using the official uv standalone installer. uv and uvx are installed system-wide in `/usr/local/bin`, outside user configuration volumes. The installer selects the Linux architecture and fails if no compatible binary is available; both executables are checked during build and again as the target user at startup. At container startup, its entrypoint saves the selected provider and routing, then runs `claude-mem install --no-auto-start --ide <ide>` non-interactively for each selected integration. Claude and host providers also pass `--provider`; Codex uses the saved-provider path described below. After all registrations succeed, the Feature explicitly runs `claude-mem start` once. `ide=claude-code,codex-cli` runs registration once for Claude Code and once for Codex. The default remains `ide=claude-code`. Registration uses the target user and an explicit PATH containing `/usr/local/bin`, inherited by Workers started during installation. No additional `npx` or postCreateCommand registration is needed. Session memory is stored in `~/.claude-mem`, which is linked to a named volume so it persists across container rebuilds.
 
 ## Using the Claude provider
 
@@ -31,7 +31,7 @@ The `claude` provider requires the Claude Code CLI regardless of the selected `i
 
 ## Codex and source-based providers
 
-`provider=codex` uses Codex to process observations and summaries, regardless of which IDE produced the session. Install the Codex Feature and run `codex login` as the remote user. Claude Code CLI is required only when registering its IDE integration or using the Claude provider. Codex provider authentication requires a file-backed ChatGPT login; an API-key login is not accepted by the upstream Codex subscription provider.
+`provider=codex` uses Codex to process observations and summaries, regardless of which IDE produced the session. Install the Codex Feature and run `codex login` as the remote user. Claude Code CLI is required only when registering its IDE integration or using the Claude provider. Codex provider authentication requires a file-backed ChatGPT login; an API-key login is not accepted by the upstream Codex subscription provider. The Feature saves `CLAUDE_MEM_PROVIDER=codex` and omits `--provider` during registration so the upstream non-interactive installer retains the saved provider. Passing `--provider codex` explicitly in claude-mem 15.17.1 starts cmem.ai browser pairing even with `CI=true`; container startup must not use that path.
 
 `provider=by-source` is a Feature preset, not a provider name passed to the upstream CLI. It saves the following routing in `~/.claude-mem/settings.json` and installs using `--provider claude` as the default:
 
@@ -45,7 +45,7 @@ Claude Code sessions use Claude and Codex sessions use Codex. Other sources fall
 
 These modes require an upstream version with the corresponding Codex/source-routing support (confirmed in claude-mem 15.17.1). The build checks for that capability in the installed Worker bundle and rejects versions lacking it. The Feature does not automate interactive authentication or establish that credentials are usable.
 
-The Feature reapplies its routing key on every startup while preserving other settings. Selecting `claude`, `codex` or `host` clears source overrides, including mappings previously saved manually, so the selected single provider applies to all sessions. Invalid JSON or a non-object settings file causes initialization to fail without overwriting that file.
+The Feature reapplies its provider and routing keys on every startup while preserving other settings, including supported legacy settings nested under `env`. Selecting `claude`, `codex` or `host` clears source overrides, including mappings previously saved manually, so the selected single provider applies to all sessions. Invalid JSON or a non-object settings file causes initialization to fail without overwriting that file.
 
 ## Registering both IDEs
 
@@ -64,7 +64,7 @@ The `ide` option is a comma-separated string, converted to an array internally. 
 
 ## Startup, persistence and failures
 
-Every startup reapplies the requested registrations through the upstream installer, including when existing IDE configuration volumes are reused after rebuilding the image. The Feature does not replace IDE configuration files itself. uv/uvx are restored by the image build, independently of persisted configuration. Existing Workers must be restarted after rebuilding to inherit the new environment.
+Fresh non-interactive upstream installs skip Worker autostart, so the Feature starts the Worker explicitly after registering every selected integration. Every startup reapplies the requested registrations through the upstream installer, including when existing IDE configuration volumes are reused after rebuilding the image. The Feature does not replace IDE configuration files itself. uv/uvx are restored by the image build, independently of persisted configuration. Existing Workers must be restarted after rebuilding to inherit the new environment.
 
 The entrypoint checks uv, uvx and the required IDE commands before updating provider routing or registering integrations. Missing prerequisites or a non-zero installer result make initialization exit non-zero. With `ide=claude-code,codex-cli`, both registrations are attempted, and either failure makes the overall result a failure. Already completed registrations are retained; fix the reported problem and rerun `/usr/local/share/claude-mem-init.sh` as the remote user (or restart the container). A failed initialization may prevent container startup, depending on the Dev Container implementation.
 
