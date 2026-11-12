@@ -190,5 +190,45 @@ printf 'registered\\n' > "$HOME/.config-test/$ide"
             self.assertEqual(len(self.log.read_text().splitlines()), 2)
 
 
+class InitializationWaitTest(unittest.TestCase):
+    def run_wait(self, configure_provider=True, start_worker=True):
+        source = Path(__file__).with_name('integration.sh').read_text()
+        wait_function = source.split('wait_for_initialization() {', 1)[1].split('\ncheck "initial_registration"', 1)[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            # Reproduce the CI order: registration is visible immediately,
+            # provider settings arrive later, and Worker health arrives last.
+            script = """set -eu
+cd "$1"
+verify_integrations() { return 0; }
+verify_provider_settings() { test -f provider; }
+curl() { test -f worker; }
+sleep() {
+    if [[ -f provider ]]; then
+        [[ "$START_WORKER" != true ]] || touch worker
+    else
+        [[ "$CONFIGURE_PROVIDER" != true ]] || touch provider
+    fi
+}
+wait_for_initialization() {""" + wait_function + "\nwait_for_initialization 3\n"
+            return subprocess.run(['bash', '-c', script, 'wait-test', tmp],
+                                  env=dict(os.environ, CONFIGURE_PROVIDER=str(configure_provider).lower(),
+                                           START_WORKER=str(start_worker).lower()),
+                                  capture_output=True, text=True)
+
+    def test_waits_for_provider_then_worker(self):
+        result = self.run_wait()
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_missing_provider_times_out(self):
+        result = self.run_wait(configure_provider=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Timed out', result.stderr)
+
+    def test_missing_worker_times_out(self):
+        result = self.run_wait(start_worker=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Timed out', result.stderr)
+
+
 if __name__ == '__main__':
     unittest.main()

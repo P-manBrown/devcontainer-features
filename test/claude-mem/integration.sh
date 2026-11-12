@@ -23,13 +23,6 @@ verify_integrations() {
         test -f "${HOME}/.claude/plugins/marketplaces/thedotmack/plugin/hooks/codex-hooks.json" || return 1
     fi
 }
-# Feature entrypoints can run asynchronously to the scenario test command.
-ready=false
-for ((attempt=0; attempt<120; attempt++)); do
-    if verify_integrations >/dev/null 2>&1; then ready=true; break; fi
-    sleep 1
-done
-check "initial_registration" test "${ready}" = true
 verify_provider_settings() {
     local expected="${PROVIDER}"
     [[ "${expected}" != by-source ]] || expected=claude
@@ -40,6 +33,24 @@ verify_provider_settings() {
         jq -e '.CLAUDE_MEM_PROVIDER_BY_SOURCE == ""' "${HOME}/.claude-mem/settings.json" >/dev/null
     fi
 }
+# Plugin registration precedes provider configuration and Worker startup in the
+# upstream installer. Wait for all three before testing or reinstalling, since
+# Feature entrypoints can still be running when the scenario command begins.
+wait_for_initialization() {
+    local attempt
+    local port="${CLAUDE_MEM_WORKER_PORT:-$((37700 + $(id -u) % 100))}"
+    for ((attempt=0; attempt<${1:-120}; attempt++)); do
+        if verify_integrations >/dev/null 2>&1 &&
+            verify_provider_settings >/dev/null 2>&1 &&
+            curl --fail --silent --max-time 2 "http://127.0.0.1:${port}/api/readiness" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+    done
+    echo "Timed out waiting for claude-mem integrations, provider settings and Worker readiness." >&2
+    return 1
+}
+check "initial_registration" wait_for_initialization
 check "provider_settings" verify_provider_settings
 check "cache_is_symlink" test -L "${HOME}/.claude-mem"
 
