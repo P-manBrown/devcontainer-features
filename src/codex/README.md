@@ -1,13 +1,13 @@
 
 # Codex (codex)
 
-Install the official Codex CLI. Relaxes the container's seccomp/AppArmor profiles and adds SYS_ADMIN so Codex's bubblewrap-based Linux sandbox can create the user namespace it needs.
+Install the official Codex CLI. Codex's own sandbox is turned off by default; the container is the sandbox.
 
 ## Example Usage
 
 ```json
 "features": {
-    "ghcr.io/P-manBrown/devcontainer-features/codex:2": {}
+    "ghcr.io/P-manBrown/devcontainer-features/codex:3": {}
 }
 ```
 
@@ -23,30 +23,17 @@ Install the official Codex CLI. Relaxes the container's seccomp/AppArmor profile
 
 - `openai.chatgpt`
 
-## Sandbox permissions
+## Sandbox
 
-Codex's bubblewrap-based Linux sandbox needs to create a user namespace. This Feature therefore sets `securityOpt` to `seccomp=unconfined` and `apparmor=unconfined`, and adds the `SYS_ADMIN` capability, so bubblewrap can create that namespace inside the container.
+Codex's own Linux sandbox (bubblewrap) needs to create a user namespace, which a container only allows with the `SYS_ADMIN` capability and with the seccomp and AppArmor profiles turned off. Those settings weaken the container's security boundary for every process in it, so this Feature does not add them. Instead it treats the container itself as the sandbox and writes the following to `/etc/codex/config.toml`:
 
-These settings weaken the container's security boundary: disabling the seccomp and AppArmor profiles applies to every process in the container, and `SYS_ADMIN` is a powerful capability. Review this trade-off before using the Feature, especially with untrusted code.
-
-For reference, see OpenAI's official [`.devcontainer/devcontainer.secure.json`](https://github.com/openai/codex/tree/main/.devcontainer), which uses the same `seccomp=unconfined` + `apparmor=unconfined` + `SYS_ADMIN` combination (plus additional capabilities for its debugging/firewall setup, which this Feature does not need).
-
-## Known limitation: host-level `apparmor_restrict_unprivileged_userns`
-
-Some Linux hosts (Ubuntu 24.04+ and derivatives) enforce a **host-wide** kernel sysctl, `kernel.apparmor_restrict_unprivileged_userns`, that blocks unprivileged (non-root) processes from creating user namespaces — independent of any per-container `securityOpt`/`capAdd` settings. If this sysctl is `1` on the Docker host, sandboxed exec still fails as a non-root container user even with everything this Feature sets, with errors like:
-
-```
-unshare: write failed /proc/self/uid_map: Operation not permitted
-bwrap: setting up uid map: Permission denied
+```toml
+sandbox_mode = "danger-full-access"
 ```
 
-This is a **host kernel** setting, not a container setting — it cannot be worked around from inside the container, and this Feature cannot disable it. If you control the Docker host, disable it there:
+This is Codex's lowest-precedence config layer, so a `sandbox_mode` you set in `~/.codex/config.toml`, in a project's `.codex/config.toml`, or with `-c` on the command line still wins. Without the settings above, any sandboxed mode (such as `read-only` or `workspace-write`) fails with `bwrap: No permissions to create a new namespace`. If `/etc/codex/config.toml` already exists when the Feature is installed, it is left unchanged.
 
-```
-sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-```
-
-On managed environments where you don't control the host (e.g. GitHub Codespaces), there is no workaround available to this Feature.
+When upgrading from an earlier version of this Feature, check `~/.codex/config.toml` (kept in the `codex-config` volume) and any project `.codex/config.toml` for a `sandbox_mode` other than `danger-full-access`, and for scripts that pass `--full-auto` or `-s`/`--sandbox`: these still ask for the sandbox and now fail with the error above.
 
 
 ---
