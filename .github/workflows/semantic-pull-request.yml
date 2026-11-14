@@ -35,3 +35,51 @@ jobs:
             starts with a lowercase character and does not end with a period.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  language:
+    name: Check PR language
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title and body for Japanese characters
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        shell: python3 {0}
+        run: |
+          import os
+          import re
+          import sys
+
+          sys.stdout.reconfigure(encoding="utf-8")
+
+          JAPANESE = re.compile(
+              "["
+              "\u3000-\u303f"  # CJK symbols and punctuation, including the ideographic space
+              "\u3040-\u309f"  # hiragana
+              "\u30a0-\u30ff"  # katakana
+              "\u31f0-\u31ff"  # katakana phonetic extensions
+              "\u3400-\u4dbf"  # CJK unified ideographs extension A
+              "\u4e00-\u9fff"  # CJK unified ideographs
+              "\uf900-\ufaff"  # CJK compatibility ideographs
+              "\uff00-\uffef"  # half-width and full-width forms
+              "]"
+          )
+
+
+          def report(location, text):
+              found = JAPANESE.findall(text)
+              if found:
+                  print(f"::error::Japanese characters in PR {location}: {''.join(found)}")
+              return bool(found)
+
+
+          failed = report("title", os.environ.get("TITLE", ""))
+          for number, line in enumerate(os.environ.get("BODY", "").split("\n"), start=1):
+              if line.endswith("\r"):
+                  line = line[:-1]
+              if report(f"body line {number}", line):
+                  failed = True
+
+          if failed:
+              sys.exit(1)
+          print("PR title and body contain no Japanese characters.")
