@@ -1,0 +1,22 @@
+{
+  "id": "openpencil",
+  "version": "1.0.0",
+  "name": "OpenPencil (ZSeven-W)",
+  "documentationURL": "https://github.com/P-manBrown/devcontainer-features/tree/main/src/openpencil",
+  "licenseURL": "https://github.com/P-manBrown/devcontainer-features/blob/main/LICENSE",
+  "description": "Install the ZSeven-W/openpencil 'op' CLI and the headless 'openpencil-desktop' binary from GitHub Releases. Requires glibc 2.39 or later. This is not openpencil.dev.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["0.8.5"],
+      "default": "0.8.5",
+      "description": "Exact ZSeven-W/openpencil release version (e.g. '0.8.5'). 'latest' is not supported: upstream publishes only prereleases."
+    }
+  },
+  "containerEnv": {
+    "OPENPENCIL_DESKTOP_BIN": "/usr/local/share/openpencil/openpencil-desktop"
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils"
+  ]
+}
